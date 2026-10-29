@@ -120,6 +120,7 @@ function MainLayout({
 }
 
 export default function App() {
+  const { activeAccount } = useAuth()
   const [isLogsOpen, setIsLogsOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
