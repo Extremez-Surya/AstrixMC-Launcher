@@ -467,7 +467,7 @@ export default function HomePage() {
                     TODAY
                   </span>
                 </div>
-                <span className="font-mono text-xs text-slate-400">v4.7.0 Updates (Oct 26)</span>
+                <span className="font-mono text-xs text-slate-400">v1.0.0 Release (Oct 29)</span>
               </div>
             </div>
 
@@ -548,7 +548,7 @@ export default function HomePage() {
                     WHAT'S NEW
                   </h4>
                   <p className="text-xs text-slate-300 mt-0.5">
-                    v4.7.0 Modrinth Hub, File Manager, 3D Skins & Gallery
+                    v1.0.0 Stable — Auto-Updater, Zero-Drop Downloads & Crash Fixes
                   </p>
                 </div>
               </div>

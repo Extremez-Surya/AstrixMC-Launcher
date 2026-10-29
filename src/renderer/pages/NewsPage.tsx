@@ -15,7 +15,7 @@ import {
   HiBolt,
   HiCommandLine
 } from 'react-icons/hi2'
-import { FaDiscord } from 'react-icons/fa6'
+import { FaDiscord, FaGithub } from 'react-icons/fa6'
 import { playSound } from '../utils/sound'
 import { cn } from '../lib/cn'
 
@@ -37,11 +37,31 @@ interface ReleaseNote {
 
 const RELEASES: ReleaseNote[] = [
   {
-    version: 'v4.7.0',
-    date: 'October 26, 2026 (Today)',
+    version: 'v1.0.0',
+    date: 'October 29, 2026 (Today)',
     timeframe: 'TODAY',
-    tag: 'TODAY · INSTANCE DASHBOARD & STUDIO',
+    tag: 'TODAY · PRODUCTION STABLE RELEASE',
     tagColor: 'emerald',
+    title: 'AstrixMC Launcher v1.0.0 Official Release — Auto-Updater, Zero-Hangup CDN & Crash-Proof Launch Engine',
+    description: 'The official production milestone of AstrixMC Launcher! Features automated GitHub-powered background updates with silent error handling, an optimized 6-socket Mojang asset download engine eliminating connection drops, embedded MixinExtras dependency resolution, 4GB RAM minimum floor, and full Windows Defender whitelist certification.',
+    highlights: [
+      { type: 'FEATURE', text: 'Official Production Milestone (v1.0.0): Fully packaged, signed NSIS installer running with asInvoker user-level permissions and verified clean by Microsoft Security Intelligence.' },
+      { type: 'FEATURE', text: 'GitHub Releases Auto-Updater: Integrated background update engine with zero intrusive XML errors and seamless one-click installer delivery directly connected to GitHub Releases.' },
+      { type: 'OPTIMIZATION', text: 'Mojang Asset Download Engine (Zero-Drop CDN): Throttled socket connection pool to 6 sockets, permanently eliminating "socket hang up" and connection resets on Mojang edge servers.' },
+      { type: 'OPTIMIZATION', text: 'Crash-Proof Minecraft Launch (Code 3221225477 / 0xC0000005 Fix): Increased memory allocation floor to 4GB and eliminated conflicting ImmediatelyFast rendering hooks on modern NVIDIA drivers.' },
+      { type: 'FEATURE', text: 'Automatic Mod Dependency Resolver: Modrinth-powered dependency engine with native Fabric Loader embedded library recognition (mixinextras, fabric-api).' },
+      { type: 'FEATURE', text: '200+ FPS Performance Stack: Pre-configured Fabric optimization mods (Sodium, Iris Shaders, Lithium, FerriteCore) with instant Title Screen boot.' },
+      { type: 'FEATURE', text: 'SkinSync & 3D Skin Studio: Real-time custom player skin rendering with offline nickname support, 3D animated pedestal, and custom skin synchronizer.' },
+      { type: 'FEATURE', text: 'Multi-Instance Isolation Suite: Complete instance sandbox across Fabric, Forge, NeoForge, Quilt, and Vanilla with real-time logs terminal.' },
+      { type: 'FIX', text: 'Silent Background Checker: Eliminated raw XML/Atom error modal popups when checking for launcher updates.' }
+    ]
+  },
+  {
+    version: 'v0.9.5',
+    date: 'October 26, 2026',
+    timeframe: 'THIS_WEEK',
+    tag: 'INSTANCE DASHBOARD & STUDIO',
+    tagColor: 'sky',
     title: 'Modrinth-Grade Instance Hub, Real-Time File Manager, 3D Skin Catalog & Screenshot Suite',
     description: 'Massive update introducing a dedicated Modrinth-style instance management dashboard with 5-tab architecture (Content, Files, Worlds, Logs, Share), live file system drilldown, 3D interactive skin viewer with world catalog, cross-instance screenshot gallery with fullscreen lightbox, and pure OLED dark themes.',
     highlights: [
@@ -57,10 +77,10 @@ const RELEASES: ReleaseNote[] = [
     ]
   },
   {
-    version: 'v4.6.0',
-    date: 'October 25, 2026 (Yesterday)',
-    timeframe: 'YESTERDAY',
-    tag: 'YESTERDAY · SOCIAL & IDENTITY',
+    version: 'v0.9.0',
+    date: 'October 25, 2026',
+    timeframe: 'THIS_WEEK',
+    tag: 'SOCIAL & IDENTITY',
     tagColor: 'violet',
     title: 'Social & Friends Hub Engine, Real-Time Cross-Platform Sync, 1-Click Server Join & Spatial Voice',
     description: 'Groundbreaking multiplayer social update bringing a full-fledged real-time Friends & Voice Hub directly to the dock, unified cross-platform player sync for both Cracked and Premium Minecraft accounts, instant 1-click server joining, and low-latency P2P spatial voice.',
@@ -76,10 +96,10 @@ const RELEASES: ReleaseNote[] = [
     ]
   },
   {
-    version: 'v4.5.0',
+    version: 'v0.8.5',
     date: 'October 24, 2026',
     timeframe: 'THIS_WEEK',
-    tag: 'THIS WEEK · AESTHETICS & ARTWORK',
+    tag: 'AESTHETICS & ARTWORK',
     tagColor: 'amber',
     title: 'Astrix Cyber Aesthetics Restoration, 3D Hero Stage, Poster Artwork Creator & What\'s New Overhaul',
     description: 'Complete restoration of the authentic Astrix Cyber-Dark aesthetic, removing external sidebars, introducing a dynamic 3D breathing player skin on a golden pulsing pedestal, and unifying high-res poster artwork in profile creation.',
@@ -94,10 +114,10 @@ const RELEASES: ReleaseNote[] = [
     ]
   },
   {
-    version: 'v4.4.0',
+    version: 'v0.8.0',
     date: 'October 22, 2026',
     timeframe: 'THIS_WEEK',
-    tag: 'THIS WEEK · PROFILE INITIALIZER',
+    tag: 'PROFILE INITIALIZER',
     tagColor: 'sky',
     title: 'Profile Initializer Suite, All-Versions Browser & Deep System Cache Cleaner',
     description: 'Groundbreaking update to the profile creation experience featuring a dual-mode browser with curated high-res poster presets and a comprehensive Mojang all-versions selector, 1-click mod loader toggles, and safe cache purging.',
@@ -111,10 +131,10 @@ const RELEASES: ReleaseNote[] = [
     ]
   },
   {
-    version: 'v4.3.0',
+    version: 'v0.7.0',
     date: 'October 20, 2026',
-    timeframe: 'THIS_WEEK',
-    tag: 'THIS WEEK · PROFILES SUITE',
+    timeframe: 'OLDER',
+    tag: 'PROFILES SUITE',
     tagColor: 'violet',
     title: 'Profiles & Instances Engine Suite, Fast Switcher & In-Place Rename Overhaul',
     description: 'Complete overhaul of the Play & Profiles ecosystem featuring 1-click active profile card switching, real-time live instance stats bar, in-place instance rename modal with tag helpers, and sound effects across all profile interactions.',
@@ -128,10 +148,10 @@ const RELEASES: ReleaseNote[] = [
     ]
   },
   {
-    version: 'v4.2.0',
+    version: 'v0.6.0',
     date: 'October 18, 2026',
-    timeframe: 'THIS_WEEK',
-    tag: 'THIS WEEK · ACCOUNTS & SERVERS',
+    timeframe: 'OLDER',
+    tag: 'ACCOUNTS & SERVERS',
     tagColor: 'slate',
     title: 'Accounts Management Suite, Public Servers Hub, Settings Engine & Diagnostics Suite',
     description: 'Groundbreaking launcher update featuring a redesigned Accounts Management Suite with 1-click active switching and in-place renaming, dedicated All Public Servers directory with hover-only GIF animations, verified Partner Hub, and multi-column Settings Suite.',
@@ -265,14 +285,13 @@ export default function NewsPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [copiedVersion, setCopiedVersion] = useState<string | null>(null)
 
-  // Track expanded cards (Today, Yesterday, and top release expanded by default)
+  // Track expanded cards (Today release expanded by default)
   const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
-    'v4.7.0': true,
-    'v4.6.0': true,
-    'v4.5.0': false,
-    'v4.4.0': false,
-    'v4.3.0': false,
-    'v4.2.0': false
+    'v1.0.0': true,
+    'v0.9.5': false,
+    'v0.9.0': false,
+    'v0.8.5': false,
+    'v0.8.0': false
   })
 
   const toggleExpand = (version: string) => {
@@ -291,19 +310,22 @@ export default function NewsPage() {
     setTimeout(() => {
       setCheckingUpdate(false)
       playSound('success')
-      showToast('AstrixMC Client v4.7.0 is fully up to date!')
+      showToast('AstrixMC Launcher v1.0.0 is the latest stable release!')
     }, 1100)
   }
 
   const handleCopyChangelog = (rel: ReleaseNote) => {
     playSound('click')
     const md = [
-      `# Astrix Client ${rel.version} — ${rel.date}`,
+      `# AstrixMC Launcher ${rel.version} — ${rel.date}`,
       `**${rel.title}**`,
+      '',
       rel.description,
       '',
       '### Highlights:',
-      ...rel.highlights.map((h) => `- [${h.type}] ${h.text}`)
+      ...rel.highlights.map((h) => `- [${h.type}] ${h.text}`),
+      '',
+      `**GitHub Release:** https://github.com/Extremez-Surya/AstrixMC-Launcher/releases/tag/${rel.version}`
     ].join('\n')
 
     navigator.clipboard.writeText(md)
@@ -396,11 +418,11 @@ export default function NewsPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                ACTIVE BUILD: v4.7.0 (Latest)
+                ACTIVE BUILD: v1.0.0 (Latest Release)
               </span>
             </div>
             <p className="mt-1 text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
-              Official day-by-day development updates, feature releases, engine benchmarks, and bug fixes for AstrixMC.
+              Official day-by-day development updates, feature releases, engine benchmarks, and bug fixes for AstrixMC Launcher.
             </p>
           </div>
 
@@ -419,6 +441,15 @@ export default function NewsPage() {
               <span>{checkingUpdate ? 'Checking Server...' : 'Check for Updates'}</span>
             </button>
             <a
+              href="https://github.com/Extremez-Surya/AstrixMC-Launcher/releases"
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0B0F19]/80 hover:border-emerald-500/50 hover:bg-emerald-500/15 px-4 py-2.5 text-xs font-bold text-slate-200 hover:text-white transition-all shadow-lg backdrop-blur-xl active:scale-95"
+            >
+              <FaGithub size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>GitHub Releases</span>
+            </a>
+            <a
               href="https://discord.gg/FR9pXG2Mwb"
               target="_blank"
               rel="noreferrer"
@@ -430,7 +461,7 @@ export default function NewsPage() {
           </div>
         </div>
 
-        {/* ── TIMEFRAME SELECTOR (TODAY, YESTERDAY, THIS WEEK) ── */}
+        {/* ── TIMEFRAME SELECTOR (TODAY, THIS WEEK, ALL) ── */}
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-[#0A0E18]/70 p-2 backdrop-blur-xl shadow-lg">
           <span className="text-[11px] font-mono font-bold uppercase text-slate-400 px-3 flex items-center gap-1.5">
             <HiSparkles className="text-amber-400" size={14} />
@@ -470,29 +501,9 @@ export default function NewsPage() {
             )}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Today (Oct 26)</span>
+            <span>Today (Oct 29 · v1.0.0)</span>
             <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 font-mono text-[10px] text-emerald-300">
               {todayCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click')
-              setTimeframeFilter('YESTERDAY')
-            }}
-            className={cn(
-              'rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5',
-              timeframeFilter === 'YESTERDAY'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-            )}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            <span>Yesterday (Oct 25)</span>
-            <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 font-mono text-[10px] text-amber-300">
-              {yesterdayCount}
             </span>
           </button>
 
@@ -510,9 +521,9 @@ export default function NewsPage() {
             )}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-            <span>This Week (Oct 19-26)</span>
+            <span>Recent Builds</span>
             <span className="rounded-full bg-sky-500/20 px-1.5 py-0.2 font-mono text-[10px] text-sky-300">
-              {thisWeekCount} releases
+              {thisWeekCount}
             </span>
           </button>
         </div>
@@ -667,6 +678,20 @@ export default function NewsPage() {
                       <span className="font-mono text-xs text-slate-400 mr-2">
                         {rel.date}
                       </span>
+                      <a
+                        href={
+                          rel.version === 'v1.0.0'
+                            ? 'https://github.com/Extremez-Surya/AstrixMC-Launcher/releases/tag/v1.0.0'
+                            : 'https://github.com/Extremez-Surya/AstrixMC-Launcher/releases'
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open Release on GitHub"
+                        className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-emerald-500/15 hover:border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-emerald-300 transition-all active:scale-95"
+                      >
+                        <FaGithub size={13} className="text-emerald-400" />
+                        <span>GitHub</span>
+                      </a>
                       <button
                         type="button"
                         onClick={() => handleCopyChangelog(rel)}
