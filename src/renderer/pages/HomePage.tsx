@@ -32,7 +32,6 @@ import { useInstances } from '../hooks/useInstances'
 import { useLaunch } from '../hooks/useLaunch'
 import { playSound } from '../utils/sound'
 import type { GameInstance } from '../../shared/types/instance'
-import bountifulImg from '../assets/mc_bountiful.jpg'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -43,7 +42,6 @@ export default function HomePage() {
   const [isNewInstanceModalOpen, setIsNewInstanceModalOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false)
-  const [copiedIp, setCopiedIp] = useState(false)
   const [isFullbright, setIsFullbright] = useState(false)
   const [isContentsDrawerOpen, setIsContentsDrawerOpen] = useState(false)
   const [installedModsCount, setInstalledModsCount] = useState<number>(0)
@@ -95,13 +93,6 @@ export default function HomePage() {
     await window.electronAPI.setGameOption(currentInstance.id, 'gamma', nextVal ? 15.0 : 1.0)
   }
 
-  const handleCopyIp = (ip = 'bcas.deskhost.fun:19100') => {
-    playSound('click')
-    navigator.clipboard.writeText(ip)
-    setCopiedIp(true)
-    setTimeout(() => setCopiedIp(false), 2000)
-  }
-
   const handleCreateNew = async (data: any) => {
     const inst = await createInstance(data)
     if (inst && data.installFpsPack && window.electronAPI?.installMod) {
@@ -116,24 +107,6 @@ export default function HomePage() {
 
   return (
     <div className="relative h-full w-full select-none overflow-hidden text-slate-100 flex flex-col justify-between p-6 md:p-8">
-      {/* ── CINEMATIC FULLSCREEN VIBRANT MINECRAFT BACKDROP (BRIGHT SUNLIT WORLD) ── */}
-      <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
-        <img
-          src={bountifulImg}
-          alt="Cinematic World"
-          className="h-full w-full object-cover object-center filter brightness-[0.98] contrast-[1.04] saturate-[1.1] scale-105"
-        />
-        {/* Soft edge-to-edge subtle ambient vignette */}
-        <div className="absolute inset-0 bg-black/15" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07090E]/80 via-transparent to-[#07090E]/30" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(7, 9, 14, 0.4) 85%, rgba(7, 9, 14, 0.7) 100%)'
-          }}
-        />
-      </div>
-
       {/* ── TOP FLOATING TOOLBAR HUD (ROCK CLIENT + OLD ASTRIX HYBRID) ── */}
       <header className="relative z-30 flex items-center justify-between gap-4">
         {/* Left: Instance Selector Glass Pill + Astrix Engine Badge + Server Connect */}
@@ -216,20 +189,6 @@ export default function HomePage() {
             <span className="text-amber-400">ASTRIX ENGINE V4.7</span>
             <span className="text-zinc-600">·</span>
             <span className="text-zinc-400">Ultra FPS Engine</span>
-          </div>
-
-          {/* BCAS Server Quick Connect Pill (From Old Astrix UI Image 4) */}
-          <div className="hidden lg:flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-[#0A0E18]/70 px-3 py-2 text-[11px] font-medium text-zinc-300 backdrop-blur-xl shadow-md">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399]" />
-            <span className="text-zinc-400">SMP:</span>
-            <span className="font-mono font-bold text-white">bcas.deskhost.fun:19100</span>
-            <button
-              onClick={() => handleCopyIp()}
-              title="Copy IP"
-              className="rounded-lg bg-white/[0.06] hover:bg-white/[0.12] px-2 py-0.5 text-[10px] font-bold text-amber-400 transition-colors"
-            >
-              {copiedIp ? 'COPIED!' : 'COPY'}
-            </button>
           </div>
         </div>
 
@@ -361,53 +320,6 @@ export default function HomePage() {
               {skinAnimation === 'idle' ? '▶' : '⏸'}
             </button>
           </div>
-        </div>
-
-        {/* Far Right Tool Capsule (Screenshots, Folder, SMP IP, Cave Fullbright) */}
-        <div className="pointer-events-auto absolute right-0 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2.5 rounded-3xl border border-white/[0.12] bg-[#0A0E18]/85 p-2.5 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)]">
-          <button
-            onClick={() => navigate('/screenshots')}
-            title="Minecraft Screenshots Gallery"
-            className="group flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.1] hover:text-white transition-all"
-          >
-            <HiPhoto className="h-5 w-5 group-hover:scale-110 transition-transform" />
-          </button>
-
-          <button
-            onClick={() => currentInstance && openInstanceFolder(currentInstance.id)}
-            title="Open Profile Folder (.minecraft)"
-            className="group flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.1] hover:text-white transition-all"
-          >
-            <HiFolderOpen className="h-5 w-5 group-hover:scale-110 transition-transform" />
-          </button>
-
-          <button
-            onClick={() => handleCopyIp()}
-            title="Copy BCAS Server IP"
-            className="group flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.04] text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-400 transition-all"
-          >
-            {copiedIp ? (
-              <HiCheck className="h-5 w-5 text-emerald-400" />
-            ) : (
-              <HiBolt className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            )}
-          </button>
-
-          <button
-            onClick={handleToggleFullbright}
-            title={isFullbright ? 'Fullbright Active (15.0) - Click to restore normal lighting' : 'Enable Cave Fullbright (Gamma 15.0)'}
-            className={`group flex h-10 w-10 items-center justify-center rounded-2xl transition-all ${
-              isFullbright
-                ? 'bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.5)]'
-                : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.1] hover:text-white'
-            }`}
-          >
-            {isFullbright ? (
-              <HiSun className="h-5 w-5" />
-            ) : (
-              <HiMoon className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            )}
-          </button>
         </div>
       </div>
 

@@ -11,19 +11,7 @@ import {
 import { FaMicrosoft } from 'react-icons/fa6'
 import { useAuth } from '../../hooks/useAuth'
 import { getAccountAvatar } from '../../utils/avatar'
-import villageSunsetImg from '../../assets/mc_village_sunset.jpg'
-import cherryBiomeImg from '../../assets/mc_cherry_biome.jpg'
-import bountifulImg from '../../assets/mc_bountiful.jpg'
-import trickyTrialsImg from '../../assets/mc_tricky_trials.jpg'
-import tinyTakeoverImg from '../../assets/mc_tiny_takeover.jpg'
-
-const ROTATING_WALLPAPERS = [
-  { id: 'village', src: villageSunsetImg },
-  { id: 'cherry', src: cherryBiomeImg },
-  { id: 'bountiful', src: bountifulImg },
-  { id: 'trials', src: trickyTrialsImg },
-  { id: 'tiny', src: tinyTakeoverImg }
-]
+import { ROTATING_WALLPAPERS } from '../../utils/wallpapers'
 
 // Floating animated embers/fireflies
 function AmbientEmbers() {
@@ -184,15 +172,15 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
           <img
             src={ROTATING_WALLPAPERS[bgIndex].src}
             alt="Astrix Minecraft Backdrop"
-            className="h-full w-full object-cover object-center filter brightness-[0.88] contrast-[1.05] saturate-[1.08]"
+            className="h-full w-full object-cover object-center filter brightness-[0.96] contrast-[1.04] saturate-[1.10]"
           />
-          {/* Subtle light vignette - keeps artwork bright while card pops */}
-          <div className="absolute inset-0 bg-black/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/65 via-transparent to-[#06080E]/30" />
+          {/* Subtle light vignette - keeps artwork clear & vivid while card pops */}
+          <div className="absolute inset-0 bg-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/40 via-transparent to-[#06080E]/20" />
           <div
             className="absolute inset-0"
             style={{
-              background: 'radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(6, 8, 14, 0.45) 85%, rgba(6, 8, 14, 0.7) 100%)'
+              background: 'radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(6, 8, 14, 0.35) 90%, rgba(6, 8, 14, 0.55) 100%)'
             }}
           />
         </motion.div>
