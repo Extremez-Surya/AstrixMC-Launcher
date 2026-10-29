@@ -41,7 +41,6 @@ export default function HomePage() {
 
   const [isNewInstanceModalOpen, setIsNewInstanceModalOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
-  const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false)
   const [isFullbright, setIsFullbright] = useState(false)
   const [isContentsDrawerOpen, setIsContentsDrawerOpen] = useState(false)
   const [installedModsCount, setInstalledModsCount] = useState<number>(0)
@@ -358,7 +357,13 @@ export default function HomePage() {
               <span>Modpacks</span>
             </button>
             <button
-              onClick={() => setIsQuickSettingsOpen(true)}
+              onClick={() => {
+                if (currentInstance?.id) {
+                  navigate(`/instances/${currentInstance.id}`)
+                } else {
+                  navigate('/instances')
+                }
+              }}
               className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all"
             >
               <HiAdjustmentsHorizontal className="h-3.5 w-3.5 text-amber-400" />
@@ -407,8 +412,14 @@ export default function HomePage() {
             </button>
 
             <button
-              onClick={() => setIsQuickSettingsOpen(true)}
-              title="Launch Options & Settings"
+              onClick={() => {
+                if (currentInstance?.id) {
+                  navigate(`/instances/${currentInstance.id}`)
+                } else {
+                  navigate('/instances')
+                }
+              }}
+              title="Profile Overview, Logs, Files & Share"
               className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-300 hover:bg-white/[0.1] hover:text-white transition-all"
             >
               <HiCog6Tooth className="h-5 w-5" />
@@ -602,109 +613,6 @@ export default function HomePage() {
         onClose={() => setIsNewInstanceModalOpen(false)}
         onCreate={handleCreateNew}
       />
-
-      {/* ── QUICK IN-LAUNCHER GAME OPTIONS & FULLBRIGHT MODAL ── */}
-      <AnimatePresence>
-        {isQuickSettingsOpen && currentInstance && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md rounded-3xl border border-white/[0.12] bg-[#0B0E17] p-6 shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
-                    <HiAdjustmentsHorizontal className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">Profile Quick Tweaks</h3>
-                    <p className="text-[11px] text-zinc-400">{currentInstance.name}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsQuickSettingsOpen(false)}
-                  className="rounded-lg p-1 text-zinc-400 hover:bg-white/10 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                {/* Fullbright Toggle */}
-                <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <HiSun className="h-4 w-4 text-amber-400" />
-                      <span className="text-xs font-bold text-white">Cave Fullbright Mode</span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-zinc-400">
-                      Sets gamma to 15.0 so caves and nights are fully illuminated without torches.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleToggleFullbright}
-                    className={`relative h-6 w-11 rounded-full transition-colors ${
-                      isFullbright ? 'bg-amber-500' : 'bg-white/20'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-black transition-transform ${
-                        isFullbright ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Memory Allocation */}
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white">Allocated RAM</span>
-                    <span className="text-xs font-bold text-amber-400">{currentInstance.memoryMax || 6} GB</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="16"
-                    step="1"
-                    value={Number(currentInstance.memoryMax || 6)}
-                    onChange={(e) => {
-                      updateInstance(currentInstance.id, {
-                        memoryMax: e.target.value
-                      })
-                    }}
-                    className="mt-3 w-full accent-amber-500 cursor-pointer"
-                  />
-                  <div className="mt-1 flex justify-between text-[10px] text-zinc-500">
-                    <span>2 GB (Minimal)</span>
-                    <span>6 GB (Recommended)</span>
-                    <span>16 GB (Heavy Shaders)</span>
-                  </div>
-                </div>
-
-                {/* Open options.txt file */}
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    onClick={() => openInstanceFolder(currentInstance.id)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-white"
-                  >
-                    <HiFolderOpen className="h-4 w-4 text-sky-400" />
-                    <span>Open Instance Folder</span>
-                  </button>
-
-                  <button
-                    onClick={() => setIsQuickSettingsOpen(false)}
-                    className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-black hover:bg-amber-400"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

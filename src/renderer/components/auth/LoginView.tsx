@@ -172,10 +172,10 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
           <img
             src={ROTATING_WALLPAPERS[bgIndex].src}
             alt="Astrix Minecraft Backdrop"
-            className="h-full w-full object-cover object-center filter brightness-[0.96] contrast-[1.04] saturate-[1.10]"
+            className="h-full w-full object-cover object-center filter brightness-[0.94] contrast-[1.03] saturate-[1.08] blur-[2px] scale-105"
           />
-          {/* Subtle light vignette - keeps artwork clear & vivid while card pops */}
-          <div className="absolute inset-0 bg-black/10" />
+          {/* Subtle light 30% dimming overlay with soft ambient vignette */}
+          <div className="absolute inset-0 bg-black/30" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/40 via-transparent to-[#06080E]/20" />
           <div
             className="absolute inset-0"

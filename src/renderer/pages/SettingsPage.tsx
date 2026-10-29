@@ -258,8 +258,14 @@ export default function SettingsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [customWallpaper, setCustomWallpaper] = useState<string | null>(() => localStorage.getItem('astrix_custom_wallpaper') || null)
-  const [backdropBlur, setBackdropBlur] = useState<number>(() => Number(localStorage.getItem('astrix_backdrop_blur') || 0))
-  const [backdropDim, setBackdropDim] = useState<number>(() => Number(localStorage.getItem('astrix_backdrop_dim') || 50))
+  const [backdropBlur, setBackdropBlur] = useState<number>(() => {
+    const saved = localStorage.getItem('astrix_backdrop_blur')
+    return saved !== null ? Number(saved) : 2
+  })
+  const [backdropDim, setBackdropDim] = useState<number>(() => {
+    const saved = localStorage.getItem('astrix_backdrop_dim')
+    return saved !== null ? Number(saved) : 30
+  })
 
   const showToast = (msg: string) => {
     setToastMessage(msg)

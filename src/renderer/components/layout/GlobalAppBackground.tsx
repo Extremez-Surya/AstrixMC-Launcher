@@ -4,15 +4,23 @@ import { ROTATING_WALLPAPERS } from '../../utils/wallpapers'
 
 export default function GlobalAppBackground() {
   const [customBg, setCustomBg] = useState<string | null>(() => localStorage.getItem('astrix_custom_wallpaper') || null)
-  const [blurAmount, setBlurAmount] = useState<number>(() => Number(localStorage.getItem('astrix_backdrop_blur') || 0))
-  const [dimAmount, setDimAmount] = useState<number>(() => Number(localStorage.getItem('astrix_backdrop_dim') || 25))
+  const [blurAmount, setBlurAmount] = useState<number>(() => {
+    const saved = localStorage.getItem('astrix_backdrop_blur')
+    return saved !== null ? Number(saved) : 2
+  })
+  const [dimAmount, setDimAmount] = useState<number>(() => {
+    const saved = localStorage.getItem('astrix_backdrop_dim')
+    return saved !== null ? Number(saved) : 30
+  })
   const [bgIndex, setBgIndex] = useState(0)
 
   useEffect(() => {
     const handleUpdate = () => {
       setCustomBg(localStorage.getItem('astrix_custom_wallpaper') || null)
-      setBlurAmount(Number(localStorage.getItem('astrix_backdrop_blur') || 0))
-      setDimAmount(Number(localStorage.getItem('astrix_backdrop_dim') || 25))
+      const b = localStorage.getItem('astrix_backdrop_blur')
+      setBlurAmount(b !== null ? Number(b) : 2)
+      const d = localStorage.getItem('astrix_backdrop_dim')
+      setDimAmount(d !== null ? Number(d) : 30)
     }
     window.addEventListener('astrix:wallpaper-change', handleUpdate)
     window.addEventListener('storage', handleUpdate)
