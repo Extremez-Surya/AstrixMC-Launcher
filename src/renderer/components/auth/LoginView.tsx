@@ -1,30 +1,32 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HiUser,
   HiArrowRight,
   HiShieldCheck,
   HiBolt,
-  HiCheck,
   HiChevronDown,
-  HiArrowPath
+  HiArrowPath,
+  HiPhoto
 } from 'react-icons/hi2'
 import { FaMicrosoft } from 'react-icons/fa6'
 import { useAuth } from '../../hooks/useAuth'
 import { getAccountAvatar } from '../../utils/avatar'
-import loginNightImg from '../../assets/login_night_castle.jpg'
+import cherryBiomeImg from '../../assets/mc_cherry_biome.jpg'
+import villageSunsetImg from '../../assets/mc_village_sunset.jpg'
+import bountifulImg from '../../assets/mc_bountiful.jpg'
 
 // Floating animated embers/fireflies
 function AmbientEmbers() {
   const embers = useMemo(() => {
     return Array.from({ length: 24 }).map((_, i) => ({
       id: i,
-      left: `${(i * 4.1 + 3) % 94}%`,
-      bottom: `${(i * 3.7) % 30}%`,
-      size: Math.random() * 4 + 2,
+      left: `${(i * 4.2 + 3) % 94}%`,
+      bottom: `${(i * 3.6) % 36}%`,
+      size: Math.random() * 3.5 + 2,
       duration: Math.random() * 6 + 6,
-      delay: Math.random() * 5,
-      drift: (Math.random() - 0.5) * 60
+      delay: Math.random() * 4,
+      drift: (Math.random() - 0.5) * 50
     }))
   }, [])
 
@@ -35,8 +37,8 @@ function AmbientEmbers() {
           key={e.id}
           initial={{ opacity: 0, y: 0, x: 0 }}
           animate={{
-            opacity: [0, 0.85, 0.9, 0],
-            y: [-10, -220 - Math.random() * 100],
+            opacity: [0, 0.75, 0.85, 0],
+            y: [-10, -210 - Math.random() * 90],
             x: [0, e.drift, -e.drift / 2]
           }}
           transition={{
@@ -51,7 +53,7 @@ function AmbientEmbers() {
             bottom: e.bottom,
             width: e.size,
             height: e.size,
-            boxShadow: `0 0 ${e.size * 3}px #F59E0B, 0 0 ${e.size * 6}px #D97706`
+            boxShadow: `0 0 ${e.size * 3}px #F59E0B, 0 0 ${e.size * 5}px #D97706`
           }}
         />
       ))}
@@ -59,79 +61,25 @@ function AmbientEmbers() {
   )
 }
 
-// Glowing 3D Golden Minecraft Block with Orbital Ring
-function GoldenCubeLogo() {
+// Sleek Astrix Glowing Flame Emblem (Replaced the 3D cube)
+function AstrixFlameEmblem() {
   return (
-    <div className="relative flex items-center justify-center w-24 h-24 mb-2">
-      {/* Soft golden aura */}
-      <div className="absolute inset-0 rounded-full bg-amber-500/25 blur-2xl animate-pulse" />
+    <div className="relative flex items-center justify-center w-20 h-20 mb-1">
+      {/* Soft warm pulse aura */}
+      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/25 via-orange-500/20 to-yellow-500/25 blur-2xl animate-pulse" />
 
-      {/* Floating Levitation Wrapper */}
+      {/* Floating container with subtle scale breathing */}
       <motion.div
-        animate={{ y: [0, -8, 0] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="relative flex items-center justify-center"
+        animate={{ y: [0, -5, 0], scale: [1, 1.025, 1] }}
+        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+        className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/25 via-orange-500/15 to-[#0A0D15]/80 shadow-[0_0_25px_rgba(245,158,11,0.35)]"
       >
-        {/* Orbital Elliptical Ring (Tilted 3D Orbit) */}
-        <motion.svg
-          animate={{ rotate: 360 }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-          className="absolute w-28 h-28 pointer-events-none"
-          viewBox="0 0 100 100"
-          style={{ transform: 'rotateX(65deg)' }}
-        >
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="45"
-            ry="20"
-            fill="none"
-            stroke="url(#ringGrad)"
-            strokeWidth="2.2"
-            strokeDasharray="8 6"
-            className="opacity-90"
-          />
-          <defs>
-            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.2" />
-              <stop offset="50%" stopColor="#FDE047" stopOpacity="1" />
-              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
-        </motion.svg>
-
-        {/* Isometric Golden Cube SVG */}
         <svg
-          viewBox="0 0 100 100"
-          className="w-16 h-16 drop-shadow-[0_0_16px_rgba(245,158,11,0.7)]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="h-8 w-8 text-amber-400 drop-shadow-[0_0_14px_rgba(245,158,11,0.85)]"
         >
-          <defs>
-            <linearGradient id="topFace" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FEF08A" />
-              <stop offset="100%" stopColor="#FBBF24" />
-            </linearGradient>
-            <linearGradient id="leftFace" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#B45309" />
-            </linearGradient>
-            <linearGradient id="rightFace" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#D97706" />
-              <stop offset="100%" stopColor="#78350F" />
-            </linearGradient>
-          </defs>
-
-          {/* Top Face */}
-          <polygon points="50,15 82,33 50,51 18,33" fill="url(#topFace)" />
-          {/* Left Face */}
-          <polygon points="18,33 50,51 50,87 18,69" fill="url(#leftFace)" />
-          {/* Right Face */}
-          <polygon points="50,51 82,33 82,69 50,87" fill="url(#rightFace)" />
-
-          {/* Golden Block Pixel Grid Highlights */}
-          <polygon points="50,22 72,34 50,46 28,34" fill="#FFFBEB" opacity="0.45" />
-          <line x1="18" y1="33" x2="50" y2="51" stroke="#FEF08A" strokeWidth="1.5" opacity="0.8" />
-          <line x1="82" y1="33" x2="50" y2="51" stroke="#FDE047" strokeWidth="1.5" opacity="0.8" />
-          <line x1="50" y1="51" x2="50" y2="87" stroke="#FEF08A" strokeWidth="1.5" opacity="0.8" />
+          <path d="M12.001 2c-.382 0-.749.193-.964.514C10.15 3.84 8.784 5.922 8.01 7.234 6.786 9.308 6 11.589 6 14.004c0 3.313 2.686 6 6.001 6 3.313 0 6-2.687 6-6 0-2.415-.786-4.696-2.01-6.77-.774-1.312-2.14-3.394-3.027-4.72-.215-.321-.582-.514-.963-.514zm.001 7.5c1.657 0 3 1.343 3 3 0 1.657-1.343 3-3 3-1.657 0-3-1.343-3-3 0-1.657 1.343-3 3-3z" />
         </svg>
       </motion.div>
     </div>
@@ -141,20 +89,23 @@ function GoldenCubeLogo() {
 // Minecraft Creeper Pixel Silhouette
 function CreeperIcon() {
   return (
-    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-amber-500/80 fill-current">
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-amber-500/70 fill-current">
       <rect x="2" y="2" width="12" height="12" fill="none" />
-      {/* Eyes */}
       <rect x="3" y="4" width="3" height="3" />
       <rect x="10" y="4" width="3" height="3" />
-      {/* Nose */}
       <rect x="6" y="7" width="4" height="4" />
-      {/* Mouth */}
       <rect x="5" y="9" width="1" height="4" />
       <rect x="10" y="9" width="1" height="4" />
       <rect x="6" y="10" width="4" height="1" />
     </svg>
   )
 }
+
+const WALLPAPERS = [
+  { name: 'Cherry Grove 🌸', src: cherryBiomeImg },
+  { name: 'Village Sunset 🌅', src: villageSunsetImg },
+  { name: 'Lush Valley 🏔️', src: bountifulImg }
+]
 
 export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   const {
@@ -172,6 +123,9 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   const [offlineName, setOfflineName] = useState('')
   const [validationError, setValidationError] = useState('')
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false)
+  const [bgIndex, setBgIndex] = useState(0)
+
+  const activeBg = WALLPAPERS[bgIndex]
 
   const handleOfflineSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -208,36 +162,55 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden font-sans select-none">
-      {/* ── CINEMATIC FULLSCREEN BACKGROUND WITH BREATHING EFFECT ── */}
-      <motion.div
-        animate={{ scale: [1, 1.03, 1] }}
-        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute inset-0 pointer-events-none -z-10 overflow-hidden"
-      >
-        <img
-          src={loginNightImg}
-          alt="Minecraft Night Landscape"
-          className="h-full w-full object-cover object-center filter brightness-[0.75] contrast-[1.08] saturate-[1.15]"
-        />
-        {/* Soft edge-to-edge vignette */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/95 via-transparent to-[#06080E]/70" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse at 50% 50%, transparent 20%, rgba(6, 8, 14, 0.7) 70%, #06080E 100%)'
-          }}
-        />
-      </motion.div>
+      {/* ── CINEMATIC DYNAMIC MINECRAFT WALLPAPER (DIMMED & MOODY) ── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeBg.name}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="absolute inset-0 pointer-events-none -z-10 overflow-hidden"
+        >
+          <img
+            src={activeBg.src}
+            alt={activeBg.name}
+            className="h-full w-full object-cover object-center filter brightness-[0.55] contrast-[1.12] saturate-[1.2]"
+          />
+          {/* Edge-to-edge dark dimmer and vignette */}
+          <div className="absolute inset-0 bg-[#06080E]/45" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/95 via-transparent to-[#06080E]/75" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 50%, transparent 20%, rgba(6, 8, 14, 0.75) 70%, #06080E 100%)'
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
 
       {/* Floating Animated Embers in background */}
       <AmbientEmbers />
 
+      {/* 1-Click Wallpaper Switcher Pill at bottom-left */}
+      <div className="absolute bottom-5 left-5 z-30">
+        <button
+          type="button"
+          onClick={() => setBgIndex((prev) => (prev + 1) % WALLPAPERS.length)}
+          title="Click to cycle wallpaper"
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0A0D15]/80 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:border-amber-500/40 hover:text-amber-400 backdrop-blur-xl shadow-lg transition-all"
+        >
+          <HiPhoto className="h-4 w-4 text-amber-400" />
+          <span>{activeBg.name}</span>
+        </button>
+      </div>
+
       {/* ── THE CENTER FLOATING GLASS CARD ── */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.93, y: 20 }}
+        initial={{ opacity: 0, scale: 0.93, y: 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-20 flex flex-col items-center w-full max-w-[460px] rounded-[32px] border border-amber-500/35 bg-[#0C0F17]/90 px-8 pt-7 pb-6 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_45px_rgba(245,158,11,0.22)] ring-1 ring-black/60"
+        className="relative z-20 flex flex-col items-center w-full max-w-[460px] rounded-[32px] border border-amber-500/35 bg-[#0C0F17]/92 px-8 pt-7 pb-6 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_45px_rgba(245,158,11,0.22)] ring-1 ring-black/60"
       >
         {/* Ambient subtle border halo glow behind card */}
         <div className="absolute -inset-[1px] rounded-[33px] bg-gradient-to-b from-amber-500/35 via-orange-500/15 to-transparent blur-md opacity-70 pointer-events-none -z-10" />
@@ -292,8 +265,8 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
           </div>
         )}
 
-        {/* 1. Golden Glowing 3D Cube with Orbital Ring */}
-        <GoldenCubeLogo />
+        {/* 1. Official Astrix Flame Emblem (Box logo removed) */}
+        <AstrixFlameEmblem />
 
         {/* 2. Title: Welcome to AstrixMC */}
         <motion.h1
@@ -322,8 +295,8 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
           <CreeperIcon />
         </div>
 
-        {/* 4. Pill Auth Switcher (Offline Mode / Microsoft) */}
-        <div className="flex w-full rounded-2xl border border-white/[0.08] bg-[#07090F]/90 p-1 mb-4">
+        {/* 4. Pill Auth Switcher with Animated Sliding layoutId Pill */}
+        <div className="relative flex w-full rounded-2xl border border-white/[0.08] bg-[#07090F]/90 p-1 mb-4">
           <button
             type="button"
             onClick={() => {
@@ -331,14 +304,21 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
               clearError()
               setValidationError('')
             }}
-            className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-all duration-200 ${
-              mode === 'offline'
-                ? 'bg-gradient-to-r from-amber-500/30 to-orange-500/25 text-amber-300 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
-                : 'text-zinc-400 hover:text-white'
+            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-colors duration-200 ${
+              mode === 'offline' ? 'text-amber-300' : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <HiBolt className={`h-3.5 w-3.5 ${mode === 'offline' ? 'text-amber-400' : 'text-zinc-400'}`} />
+            <HiBolt className={`h-3.5 w-3.5 transition-colors ${mode === 'offline' ? 'text-amber-400' : 'text-zinc-400'}`} />
             <span>Offline Mode</span>
+
+            {/* Smooth animated sliding pill background */}
+            {mode === 'offline' && (
+              <motion.div
+                layoutId="activeLoginTab"
+                className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-500/30 to-orange-500/25 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] -z-10"
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+              />
+            )}
           </button>
 
           <button
@@ -348,10 +328,8 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
               clearError()
               setValidationError('')
             }}
-            className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-all duration-200 ${
-              mode === 'microsoft'
-                ? 'bg-sky-500/25 text-sky-300 border border-sky-500/40 shadow-[0_0_15px_rgba(56,189,248,0.25)]'
-                : 'text-zinc-400 hover:text-white'
+            className={`relative z-10 flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold transition-colors duration-200 ${
+              mode === 'microsoft' ? 'text-sky-300' : 'text-zinc-400 hover:text-white'
             }`}
           >
             {/* Microsoft 4-color square icon */}
@@ -362,6 +340,15 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
               <div className="h-1.5 w-1.5 bg-[#ffb900]" />
             </div>
             <span>Microsoft</span>
+
+            {/* Smooth animated sliding pill background */}
+            {mode === 'microsoft' && (
+              <motion.div
+                layoutId="activeLoginTab"
+                className="absolute inset-0 rounded-xl bg-sky-500/25 border border-sky-500/40 shadow-[0_0_15px_rgba(56,189,248,0.25)] -z-10"
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+              />
+            )}
           </button>
         </div>
 
@@ -376,98 +363,156 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
           </motion.div>
         )}
 
-        {/* 5. Offline Form */}
-        {mode === 'offline' && (
-          <form onSubmit={handleOfflineSubmit} className="w-full space-y-4">
-            {/* Input Box */}
-            <div className="relative flex items-center">
-              <div className="absolute left-4 text-zinc-400">
-                <HiUser className="h-4 w-4" />
-              </div>
-              <input
-                type="text"
-                value={offlineName}
-                onChange={(e) => {
-                  setOfflineName(e.target.value)
-                  if (validationError) setValidationError('')
-                }}
-                placeholder="Enter your Minecraft username..."
-                maxLength={16}
-                autoFocus
-                className="w-full rounded-2xl border border-white/[0.12] bg-[#07090F]/90 py-3.5 pl-11 pr-12 text-sm font-semibold text-white placeholder-zinc-500 focus:border-amber-400 focus:bg-[#090C14] focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-mono shadow-inner"
-              />
-              {/* Live Avatar Preview badge on right */}
-              {offlineName.trim().length >= 3 && (
-                <div className="absolute right-3.5 h-6 w-6 rounded-md overflow-hidden ring-1 ring-white/10">
-                  <img
-                    src={`https://minotar.net/avatar/${encodeURIComponent(offlineName.trim())}/24.png`}
-                    alt="Preview"
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
+        {/* 5. Animated Tab Switcher Content (Slide & Blur Animation) */}
+        <div className="w-full relative min-h-[120px]">
+          <AnimatePresence mode="wait">
+            {mode === 'offline' ? (
+              <motion.form
+                key="offline-mode"
+                initial={{ opacity: 0, x: -16, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: 16, filter: 'blur(4px)' }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                onSubmit={handleOfflineSubmit}
+                className="w-full space-y-4"
+              >
+                {/* Input Box */}
+                <div className="relative flex items-center">
+                  <div className="absolute left-4 text-zinc-400">
+                    <HiUser className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={offlineName}
+                    onChange={(e) => {
+                      setOfflineName(e.target.value)
+                      if (validationError) setValidationError('')
                     }}
+                    placeholder="Enter your Minecraft username..."
+                    maxLength={16}
+                    autoFocus
+                    className="w-full rounded-2xl border border-white/[0.12] bg-[#07090F]/90 py-3.5 pl-11 pr-12 text-sm font-semibold text-white placeholder-zinc-500 focus:border-amber-400 focus:bg-[#090C14] focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-mono shadow-inner"
                   />
+                  {/* Live Avatar Preview badge on right */}
+                  {offlineName.trim().length >= 3 && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute right-3.5 h-6 w-6 rounded-md overflow-hidden ring-1 ring-white/10"
+                    >
+                      <img
+                        src={`https://minotar.net/avatar/${encodeURIComponent(offlineName.trim())}/24.png`}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </motion.div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Big Vibrant Rounded "ENTER MINECRAFT →" Button */}
-            <motion.button
-              type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="group relative flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#F59E0B] via-[#FFA500] to-[#E67E22] py-4 text-sm font-black tracking-wider uppercase text-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_10px_35px_rgba(245,158,11,0.45)] hover:shadow-[0_12px_45px_rgba(245,158,11,0.65)] transition-all disabled:opacity-60 overflow-hidden"
-            >
-              {/* Shimmer sweep effect */}
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 ease-in-out" />
+                {/* Big Animated "ENTER MINECRAFT →" Button with glowing pulse & shimmer */}
+                <motion.button
+                  type="submit"
+                  disabled={isLoading}
+                  animate={{
+                    boxShadow: [
+                      '0 0 20px rgba(245,158,11,0.35)',
+                      '0 0 35px rgba(245,158,11,0.6)',
+                      '0 0 20px rgba(245,158,11,0.35)'
+                    ]
+                  }}
+                  transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group relative flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#F59E0B] via-[#FFA500] to-[#E67E22] py-4 text-sm font-black tracking-wider uppercase text-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.6)] transition-all disabled:opacity-60 overflow-hidden"
+                >
+                  {/* Continuous flowing light shimmer sweep */}
+                  <motion.div
+                    animate={{ x: ['-120%', '220%'] }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                      repeatDelay: 1.2
+                    }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 pointer-events-none"
+                  />
 
-              {isLoading ? (
-                <>
-                  <HiArrowPath className="h-5 w-5 animate-spin text-black" />
-                  <span>Connecting...</span>
-                </>
-              ) : (
-                <>
-                  <span>ENTER MINECRAFT</span>
-                  <HiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </motion.button>
-          </form>
-        )}
+                  {isLoading ? (
+                    <>
+                      <HiArrowPath className="h-5 w-5 animate-spin text-black" />
+                      <span>Connecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>ENTER MINECRAFT</span>
+                      <HiArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </motion.button>
+              </motion.form>
+            ) : (
+              <motion.div
+                key="microsoft-mode"
+                initial={{ opacity: 0, x: 16, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: -16, filter: 'blur(4px)' }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="w-full space-y-4"
+              >
+                <p className="text-xs leading-relaxed text-zinc-300 text-center">
+                  Sign in with your official Microsoft account to sync your skins, capes, and join official realms & servers.
+                </p>
 
-        {/* 6. Microsoft Mode Form */}
-        {mode === 'microsoft' && (
-          <div className="w-full space-y-4">
-            <p className="text-xs leading-relaxed text-zinc-300 text-center">
-              Sign in with your official Microsoft account to sync your skins, capes, and join official realms & servers.
-            </p>
+                {/* Animated Microsoft Button */}
+                <motion.button
+                  type="button"
+                  onClick={handleMicrosoft}
+                  disabled={isLoading}
+                  animate={{
+                    boxShadow: [
+                      '0 0 15px rgba(255,255,255,0.15)',
+                      '0 0 25px rgba(56,189,248,0.3)',
+                      '0 0 15px rgba(255,255,255,0.15)'
+                    ]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group relative flex w-full items-center justify-center gap-3 rounded-2xl bg-white hover:bg-zinc-100 py-4 text-sm font-black tracking-wider uppercase text-black transition-all disabled:opacity-60 overflow-hidden"
+                >
+                  {/* Continuous subtle shimmer sweep */}
+                  <motion.div
+                    animate={{ x: ['-120%', '220%'] }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                      repeatDelay: 1.5
+                    }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-300/30 to-transparent skew-x-12 pointer-events-none"
+                  />
 
-            <motion.button
-              type="button"
-              onClick={handleMicrosoft}
-              disabled={isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="group relative flex w-full items-center justify-center gap-3 rounded-2xl bg-white hover:bg-zinc-100 py-4 text-sm font-black tracking-wider uppercase text-black shadow-[0_10px_35px_rgba(255,255,255,0.25)] transition-all disabled:opacity-60"
-            >
-              <div className="grid grid-cols-2 gap-0.5">
-                <div className="h-2 w-2 bg-[#f25022]" />
-                <div className="h-2 w-2 bg-[#7fba00]" />
-                <div className="h-2 w-2 bg-[#00a4ef]" />
-                <div className="h-2 w-2 bg-[#ffb900]" />
-              </div>
-              <span>{isLoading ? 'Connecting to Microsoft...' : 'Continue with Microsoft'}</span>
-            </motion.button>
+                  <div className="grid grid-cols-2 gap-0.5">
+                    <div className="h-2 w-2 bg-[#f25022]" />
+                    <div className="h-2 w-2 bg-[#7fba00]" />
+                    <div className="h-2 w-2 bg-[#00a4ef]" />
+                    <div className="h-2 w-2 bg-[#ffb900]" />
+                  </div>
+                  <span>{isLoading ? 'Connecting to Microsoft...' : 'Continue with Microsoft'}</span>
+                </motion.button>
 
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-[10px] text-zinc-400 text-center">
-              🔒 Official secure Microsoft OAuth. AstrixMC never accesses your password.
-            </div>
-          </div>
-        )}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-[10px] text-zinc-400 text-center">
+                  🔒 Official secure Microsoft OAuth. AstrixMC never accesses your password.
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-        {/* 7. Footer Trust Tags (Matching Screenshot) */}
+        {/* 6. Footer Trust Tags */}
         <div className="mt-5 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
           <div className="flex items-center gap-1.5 text-emerald-400">
             <HiShieldCheck className="h-3.5 w-3.5" />
