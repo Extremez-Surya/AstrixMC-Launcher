@@ -36,7 +36,7 @@ function PageContent() {
   const location = useLocation()
 
   return (
-    <main className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-transparent transition-colors duration-300">
+    <main className="relative min-w-0 flex-1 h-full overflow-y-auto overflow-x-hidden bg-transparent transition-colors duration-300 flex flex-col">
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -44,7 +44,7 @@ function PageContent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeOut' } }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="min-h-full w-full max-w-full overflow-x-hidden"
+          className="h-full w-full max-w-full overflow-x-hidden flex flex-col flex-1"
         >
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />

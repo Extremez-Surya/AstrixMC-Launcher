@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import bgWallpaper from '../../assets/launcher_space_bg.jpg'
+import bgWallpaper from '../../assets/mc_bountiful.jpg'
 
 export default function GlobalAppBackground() {
   const [customBg, setCustomBg] = useState<string | null>(() => localStorage.getItem('astrix_custom_wallpaper') || null)
