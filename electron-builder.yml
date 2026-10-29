@@ -1,0 +1,37 @@
+appId: com.astrixmc.launcher
+productName: AstrixMC Launcher
+publish:
+  provider: github
+  owner: Extremez-Surya
+  repo: AstrixMC-Launcher
+  releaseType: release
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!client/**/*'
+  - '!build/**/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc,.prettierignore,.prettierrc,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+win:
+  icon: resources/icon.ico
+  executableName: AstrixMC-Launcher
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: AstrixMC-Launcher-Setup-${version}.${ext}
+  shortcutName: AstrixMC Launcher
+  uninstallDisplayName: AstrixMC Launcher
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: AstrixMC-Launcher-Portable-${version}.${ext}

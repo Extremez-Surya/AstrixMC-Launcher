@@ -1,0 +1,188 @@
+Folder PATH listing for volume New Volume
+Volume serial number is D065-F0CF
+D:\ASTRIXMCLAUNCHER\SRC
++---main
+|   |   index.ts
+|   |   
+|   +---ipc
+|   |       auth.ipc.ts
+|   |       cosmetics.ipc.ts
+|   |       instances.ipc.ts
+|   |       launch.ipc.ts
+|   |       mods.ipc.ts
+|   |       servers.ipc.ts
+|   |       settings.ipc.ts
+|   |       
+|   \---services
+|       |   http.ts
+|       |   settings.ts
+|       |   store.ts
+|       |   
+|       +---auth
+|       |       microsoft.ts
+|       |       offline.ts
+|       |       token-store.ts
+|       |       
+|       +---client-ui
+|       |       astrix-menu.ts
+|       |       feather_main_menu.txt
+|       |       
+|       +---cosmetics
+|       |       cosmetics-injector.ts
+|       |       cosmetics-manager.ts
+|       |       
+|       +---instances
+|       |       instance-content.ts
+|       |       instance-manager.ts
+|       |       
+|       +---launcher
+|       |       java-manager.ts
+|       |       launch-engine.ts
+|       |       version-manager.ts
+|       |       
+|       +---modloaders
+|       |       fabric.ts
+|       |       loader-manager.ts
+|       |       
+|       +---mods
+|       |       curseforge-api.ts
+|       |       mod-manager.ts
+|       |       modpack-installer.ts
+|       |       modrinth-api.ts
+|       |       
+|       \---servers
+|               server-finder.ts
+|               
++---preload
+|       index.ts
+|       
++---renderer
+|   |   App.tsx
+|   |   env.d.ts
+|   |   index.html
+|   |   main.tsx
+|   |   
+|   +---assets
+|   |   |   astrix_server_banner.jpg
+|   |   |   brand_logo.jpg
+|   |   |   featured_news.jpg
+|   |   |   landscape.jpg
+|   |   |   launcher_space_bg.jpg
+|   |   |   logo.jpg
+|   |   |   
+|   |   \---feather_menu
+|   |           100k_promo.png
+|   |           button_dark.png
+|   |           button_dark_hover.png
+|   |           button_quit.png
+|   |           button_quit_hover.png
+|   |           button_red.png
+|   |           button_red_hover.png
+|   |           dark_background.png
+|   |           icon_chat.png
+|   |           icon_cosmetics.png
+|   |           icon_grid.png
+|   |           icon_menu.png
+|   |           icon_multiplayer.png
+|   |           icon_perks.png
+|   |           icon_screenshots.png
+|   |           icon_settings.png
+|   |           icon_singleplayer.png
+|   |           icon_store.png
+|   |           icon_wardrobe.png
+|   |           logo.png
+|   |           profile_pill_bg.png
+|   |           profile_pill_bg_hover.png
+|   |           server_cubecraft.png
+|   |           server_diamond.png
+|   |           server_hypixel.png
+|   |           server_minemen.png
+|   |           server_pvplegacy.png
+|   |           server_vanilla.png
+|   |           top_btn_bg.png
+|   |           top_btn_bg_hover.png
+|   |           user_avatar.png
+|   |           
+|   +---components
+|   |   +---auth
+|   |   |       LoginView.tsx
+|   |   |       
+|   |   +---common
+|   |   |       Button.tsx
+|   |   |       CommandPaletteModal.tsx
+|   |   |       ConsoleLogsModal.tsx
+|   |   |       DownloadProgressModal.tsx
+|   |   |       GamingIcons.tsx
+|   |   |       Modal.tsx
+|   |   |       ProgressBar.tsx
+|   |   |       SplashScreen.tsx
+|   |   |       
+|   |   +---home
+|   |   |       HeroAtmosphere.tsx
+|   |   |       
+|   |   +---instances
+|   |   |       CreateInstanceModal.tsx
+|   |   |       InstanceCard.tsx
+|   |   |       ManageInstanceModal.tsx
+|   |   |       
+|   |   +---layout
+|   |   |       FloatingDock.tsx
+|   |   |       GlobalAppBackground.tsx
+|   |   |       Sidebar.tsx
+|   |   |       TitleBar.tsx
+|   |   |       
+|   |   \---mods
+|   +---hooks
+|   |       useAuth.ts
+|   |       useInstances.ts
+|   |       useLaunch.ts
+|   |       
+|   +---lib
+|   |       cn.ts
+|   |       electron-api.ts
+|   |       
+|   +---pages
+|   |       AccountsPage.tsx
+|   |       AchievementsPage.tsx
+|   |       AstrixAiPage.tsx
+|   |       ClientHudPage.tsx
+|   |       HomePage.tsx
+|   |       InstancesPage.tsx
+|   |       ModBrowserPage.tsx
+|   |       ModDetailPage.tsx
+|   |       NewsPage.tsx
+|   |       PerformancePage.tsx
+|   |       ServersPage.tsx
+|   |       SettingsPage.tsx
+|   |       SkinStudioPage.tsx
+|   |       SocialPage.tsx
+|   |       StorePage.tsx
+|   |       StudioPage.tsx
+|   |       WardrobePage.tsx
+|   |       
+|   +---services
+|   |       server-finder-client.ts
+|   |       
+|   +---stores
+|   |       app-store.ts
+|   |       auth-store.ts
+|   |       instance-store.ts
+|   |       launch-store.ts
+|   |       
+|   +---styles
+|   |       globals.css
+|   |       
+|   \---utils
+|           client-ui-canvas.ts
+|           
+\---shared
+    \---types
+            auth.ts
+            electron.d.ts
+            instance.ts
+            ipc.ts
+            launch.ts
+            mod.ts
+            server.ts
+            version.ts
+            

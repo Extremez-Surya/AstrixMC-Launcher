@@ -1,0 +1,36 @@
+appId: com.astrixmc.client
+productName: Astrix Client
+compression: maximum
+asar: true
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - 'out/**/*'
+  - 'resources/**/*'
+  - 'package.json'
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc,.prettierignore,.prettierrc,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{logs,mods,resourcepacks,saves,scratch,screenshots,scripts,shaderpacks,ui_screenshots}/**'
+win:
+  icon: resources/icon.ico
+  executableName: Astrix-Client
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: Astrix-Client-Setup-${version}.${ext}
+  shortcutName: Astrix Client
+  uninstallDisplayName: Astrix Client
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: Astrix-Client-Portable-${version}.${ext}
