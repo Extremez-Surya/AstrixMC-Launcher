@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HiUser,
@@ -12,6 +12,18 @@ import { FaMicrosoft } from 'react-icons/fa6'
 import { useAuth } from '../../hooks/useAuth'
 import { getAccountAvatar } from '../../utils/avatar'
 import villageSunsetImg from '../../assets/mc_village_sunset.jpg'
+import cherryBiomeImg from '../../assets/mc_cherry_biome.jpg'
+import bountifulImg from '../../assets/mc_bountiful.jpg'
+import trickyTrialsImg from '../../assets/mc_tricky_trials.jpg'
+import tinyTakeoverImg from '../../assets/mc_tiny_takeover.jpg'
+
+const ROTATING_WALLPAPERS = [
+  { id: 'village', src: villageSunsetImg },
+  { id: 'cherry', src: cherryBiomeImg },
+  { id: 'bountiful', src: bountifulImg },
+  { id: 'trials', src: trickyTrialsImg },
+  { id: 'tiny', src: tinyTakeoverImg }
+]
 
 // Floating animated embers/fireflies
 function AmbientEmbers() {
@@ -114,6 +126,15 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   const [offlineName, setOfflineName] = useState('')
   const [validationError, setValidationError] = useState('')
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false)
+  const [bgIndex, setBgIndex] = useState(0)
+
+  // Auto-rotate scenic wallpapers every 7.5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBgIndex((prev) => (prev + 1) % ROTATING_WALLPAPERS.length)
+    }, 7500)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleOfflineSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,23 +171,32 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
 
   return (
     <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden font-sans select-none bg-[#07090E]">
-      {/* ── CINEMATIC DYNAMIC MINECRAFT VILLAGE SUNSET WALLPAPER (DIMMED & MOODY) ── */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <img
-          src={villageSunsetImg}
-          alt="Astrix Minecraft Village Sunset"
-          className="h-full w-full object-cover object-center filter brightness-[0.52] contrast-[1.12] saturate-[1.2] scale-105"
-        />
-        {/* Soft edge-to-edge dark dimmer and vignette */}
-        <div className="absolute inset-0 bg-[#06080E]/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/95 via-transparent to-[#06080E]/80" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse at 50% 50%, transparent 20%, rgba(6, 8, 14, 0.75) 70%, #06080E 100%)'
-          }}
-        />
-      </div>
+      {/* ── AUTO-ROTATING VIBRANT MINECRAFT WALLPAPERS (LIGHT & BRIGHT) ── */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={ROTATING_WALLPAPERS[bgIndex].id}
+          initial={{ opacity: 0, scale: 1.03 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.4, ease: 'easeInOut' }}
+          className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+        >
+          <img
+            src={ROTATING_WALLPAPERS[bgIndex].src}
+            alt="Astrix Minecraft Backdrop"
+            className="h-full w-full object-cover object-center filter brightness-[0.88] contrast-[1.05] saturate-[1.08]"
+          />
+          {/* Subtle light vignette - keeps artwork bright while card pops */}
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/65 via-transparent to-[#06080E]/30" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(6, 8, 14, 0.45) 85%, rgba(6, 8, 14, 0.7) 100%)'
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
 
       {/* Floating Animated Embers in background */}
       <AmbientEmbers />
