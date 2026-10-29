@@ -226,6 +226,7 @@ class LaunchEngine {
       discordRpcService.setGameState({ inGame: false })
     } catch {}
 
+    let exitMsg = ''
     if (code === 0 || code === null) {
       this.sendProgress({
         stage: 'idle',
@@ -233,7 +234,7 @@ class LaunchEngine {
         message: 'Minecraft closed normally'
       })
     } else {
-      let exitMsg = `Minecraft exited (code ${code}).`
+      exitMsg = `Minecraft exited (code ${code}).`
       if (code === 4294967291 || code === -5) {
         exitMsg = `Minecraft exited with code ${code} (Java runtime conflict or out of memory).`
       } else if (code === 3221225477 || code === -1073741819) {
