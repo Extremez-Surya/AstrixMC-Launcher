@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { HashRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import FloatingDock from './components/layout/FloatingDock'
+import LeftFloatingDock from './components/layout/LeftFloatingDock'
 import TitleBar from './components/layout/TitleBar'
 import GlobalAppBackground from './components/layout/GlobalAppBackground'
 import AccountsPage from './pages/AccountsPage'
@@ -27,8 +27,8 @@ import CreateInstanceModal from './components/instances/CreateInstanceModal'
 import ConsoleLogsModal from './components/common/ConsoleLogsModal'
 import DownloadProgressModal from './components/common/DownloadProgressModal'
 import UpdateNotificationModal from './components/common/UpdateNotificationModal'
+import CrashDiagnosticModal from './components/common/CrashDiagnosticModal'
 import CommandPaletteModal from './components/common/CommandPaletteModal'
-import OnboardingFlow from './components/onboarding/OnboardingFlow'
 import { useAuth } from './hooks/useAuth'
 import { useInstances } from './hooks/useInstances'
 
@@ -36,7 +36,7 @@ function PageContent() {
   const location = useLocation()
 
   return (
-    <main className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-transparent transition-colors duration-300 pb-20">
+    <main className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-transparent transition-colors duration-300">
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
@@ -79,7 +79,6 @@ function MainLayout({
 }) {
   const { activeAccount } = useAuth()
   const { createInstance } = useInstances()
-  const navigate = useNavigate()
   const [isNewInstanceModalOpen, setIsNewInstanceModalOpen] = useState(false)
 
   const handleCreate = async (data: any) => {
@@ -99,12 +98,16 @@ function MainLayout({
   }
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* Main Viewport Content */}
-      <PageContent />
+    <div className="relative flex min-h-0 flex-1 flex-row overflow-hidden">
+      {/* Left Vertical Floating Capsule Dock */}
+      <div className="flex-shrink-0 my-auto ml-3 flex items-center z-40">
+        <LeftFloatingDock onNewInstance={() => setIsNewInstanceModalOpen(true)} />
+      </div>
 
-      {/* Signature Astrix Floating Dock at bottom */}
-      <FloatingDock onNewInstance={() => setIsNewInstanceModalOpen(true)} />
+      {/* Main Viewport Content */}
+      <div className="relative min-w-0 flex-1 flex flex-col h-full overflow-hidden">
+        <PageContent />
+      </div>
 
       {/* FastClient CreateInstanceModal */}
       <CreateInstanceModal
@@ -139,9 +142,7 @@ export default function App() {
           onOpenLogs={() => setIsLogsOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}
         />
-        <OnboardingFlow>
-          <MainLayout onOpenSearch={() => setIsSearchOpen(true)} />
-        </OnboardingFlow>
+        <MainLayout onOpenSearch={() => setIsSearchOpen(true)} />
 
         <ConsoleLogsModal
           isOpen={isLogsOpen}
@@ -155,6 +156,7 @@ export default function App() {
 
         <DownloadProgressModal />
         <UpdateNotificationModal />
+        <CrashDiagnosticModal />
       </div>
     </HashRouter>
   )

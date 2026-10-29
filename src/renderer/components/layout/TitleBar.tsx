@@ -75,36 +75,8 @@ export default function TitleBar({
         </span>
       </div>
 
-      {/* Right Controls: Account Pill + Window Controls */}
-      <div className="no-drag flex h-full items-center gap-2">
-        {/* Account Switcher Pill */}
-        {activeAccount && (
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click')
-              navigate('/accounts')
-            }}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1 hover:bg-white/[0.08] hover:border-white/20 transition-all mr-1"
-          >
-            <div className="h-5 w-5 rounded-md overflow-hidden bg-black/40 border border-white/10 shrink-0">
-              <img
-                src={getAccountAvatar(activeAccount, 24)}
-                alt={activeAccount.username}
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.display = 'none'
-                }}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="flex flex-col text-left leading-tight">
-              <span className="font-mono text-[8px] font-bold text-slate-400 uppercase tracking-wider">MINECRAFT</span>
-              <span className="text-[11px] font-bold text-white leading-none">{activeAccount.username}</span>
-            </div>
-            <HiChevronDown size={13} className="text-slate-400 ml-0.5" />
-          </button>
-        )}
-
+      {/* Right Controls: Window Controls */}
+      <div className="no-drag flex h-full items-center">
         {/* Window Controls */}
         <div className="flex items-center h-full">
           <button

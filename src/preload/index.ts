@@ -83,7 +83,7 @@ const electronAPI = {
   testJavaLaunch: (customJavaPath?: string) => ipcRenderer.invoke('settings:test-java', customJavaPath).catch((err: any) => ({ success: false, message: err?.message })),
   cleanCache: () => ipcRenderer.invoke('settings:clean-cache').catch(() => ({ success: false, freedMb: 0, message: 'Failed to clean cache' })),
   checkServices: () => ipcRenderer.invoke('settings:check-services').catch(() => []),
-  checkUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_CHECK_UPDATES).catch(() => ({ hasUpdate: false, currentVersion: '4.2.0' })),
+  checkUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_CHECK_UPDATES).catch(() => ({ hasUpdate: false, currentVersion: '1.0.2' })),
 
   // Discord Rich Presence & Custom RPC Studio
   getRpcStatus: () => ipcRenderer.invoke(IPC_CHANNELS.RPC_GET_STATUS).catch(() => ({ connected: false })),
@@ -136,6 +136,16 @@ const electronAPI = {
     const handler = (_event: Electron.IpcRendererEvent, status: any) => callback(status)
     ipcRenderer.on(IPC_CHANNELS.UPDATER_STATUS, handler)
     return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATER_STATUS, handler)
+  },
+
+  // Game Settings & Fullbright & Crash Diagnostics
+  getGameOptions: (instanceId: string) => ipcRenderer.invoke('instances:get-game-options', instanceId),
+  setGameOption: (instanceId: string, key: string, value: any) => ipcRenderer.invoke('instances:set-game-option', instanceId, key, value),
+  getLatestCrashReport: (instanceId: string) => ipcRenderer.invoke('instances:get-crash-report', instanceId),
+  onGameCrashed: (callback: (data: { code: number; message: string; instanceId?: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data)
+    ipcRenderer.on('game:crashed', handler)
+    return () => ipcRenderer.removeListener('game:crashed', handler)
   }
 }
 

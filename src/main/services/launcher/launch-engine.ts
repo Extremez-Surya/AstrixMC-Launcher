@@ -254,6 +254,14 @@ class LaunchEngine {
       if (!win.isVisible()) win.show()
       if (win.isMinimized()) win.restore()
       win.focus()
+
+      if (code !== 0 && code !== null) {
+        win.webContents.send('game:crashed', {
+          code,
+          message: exitMsg,
+          instanceId: this.currentInstanceId
+        })
+      }
     }
   }
 

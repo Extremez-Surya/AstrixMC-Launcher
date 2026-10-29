@@ -37,6 +37,25 @@ interface ReleaseNote {
 
 const RELEASES: ReleaseNote[] = [
   {
+    version: 'v1.0.2',
+    date: 'October 29, 2026',
+    timeframe: 'TODAY',
+    tag: 'CINEMATIC GLASS REDESIGN',
+    tagColor: 'amber',
+    title: 'AstrixMC v1.0.2 — Cinematic AAA Redesign, Left Floating Dock, Fullbright Tweaker & Smart Crash Diagnostics',
+    description: 'A revolutionary UI & feature upgrade! Introducing a sleek Left Vertical Floating Capsule Dock, Fullscreen Cinematic Minecraft Landscape Stage, 3D Interactive Hero Character, warm Golden Hero Launch Capsule with live progress bar, Smart Crash Diagnostic Engine, and 1-click In-Launcher Cave Fullbright mode.',
+    highlights: [
+      { type: 'FEATURE', text: 'Cinematic AAA Glassmorphic Stage: Fullscreen edge-to-edge landscape canvas with soft dark vignette lighting, zero bulky containers, and floating glass HUD capsules.' },
+      { type: 'FEATURE', text: 'Left Floating Capsule Dock: Sleek vertical glass navigation capsule on the left with glowing active indicator, tooltips, Astrix logo, and player avatar online badge.' },
+      { type: 'FEATURE', text: 'Interactive 3D Hero Character: Center stage 3D skin model with smooth idle breathing animation, floating player nameplate, and camera rotation.' },
+      { type: 'FEATURE', text: 'Warm Golden Hero Launch Capsule: High-impact gold gradient Play button with quick options gear capsule and live byte-accurate download progress bar.' },
+      { type: 'FEATURE', text: 'Smart Crash Diagnostic Engine: Automatic crash interception on non-zero exit codes with friendly explanation, log preview, 1-click Crash Reports folder opener, and 1-click 6GB RAM auto-fix.' },
+      { type: 'FEATURE', text: 'In-Launcher Cave Fullbright (Gamma 15.0): 1-click toggle directly in the launcher to illuminate dark caves and night vision without torches.' },
+      { type: 'FEATURE', text: 'Profile Contents Drawer Shortcut: Seamless 1-click transition to instance contents, mods, shaders, resource packs, and live files.' },
+      { type: 'OPTIMIZATION', text: 'Zero GPU Overhead: CSS backdrop-filter optimization with hardware-accelerated rendering and ultra-low RAM footprint.' }
+    ]
+  },
+  {
     version: 'v1.0.0',
     date: 'October 29, 2026',
     timeframe: 'TODAY',

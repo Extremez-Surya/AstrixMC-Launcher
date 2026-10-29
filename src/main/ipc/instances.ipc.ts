@@ -22,6 +22,11 @@ import {
   importInstanceZip,
   uploadToMclogs
 } from '../services/instances/instance-content'
+import {
+  readGameOptions,
+  setGameOption,
+  getLatestCrashReport
+} from '../services/instances/game-settings'
 
 export function registerInstancesIPC(): void {
   ipcMain.handle(IPC_CHANNELS.INSTANCES_LIST, () => {
@@ -91,5 +96,17 @@ export function registerInstancesIPC(): void {
 
   ipcMain.handle('instances:read-log', (_event, instanceId: string, logFile?: string) => {
     return readInstanceLog(instanceId, logFile)
+  })
+
+  ipcMain.handle('instances:get-game-options', (_event, instanceId: string) => {
+    return readGameOptions(instanceId)
+  })
+
+  ipcMain.handle('instances:set-game-option', (_event, instanceId: string, key: string, value: any) => {
+    return setGameOption(instanceId, key, value)
+  })
+
+  ipcMain.handle('instances:get-crash-report', (_event, instanceId: string) => {
+    return getLatestCrashReport(instanceId)
   })
 }
