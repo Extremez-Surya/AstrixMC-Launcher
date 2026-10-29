@@ -1,6 +1,7 @@
 export interface GameInstance {
   id: string
   name: string
+  description?: string
   icon: string
   mcVersion: string
   modLoader?: {
