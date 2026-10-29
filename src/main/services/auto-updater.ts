@@ -74,10 +74,10 @@ export function initAutoUpdater(win: BrowserWindow) {
   })
 
   autoUpdater.on('error', (err) => {
-    console.warn('[AutoUpdater] Update error:', err?.message || err)
+    // Fail silently in background without popping up XML stack traces on player screens
+    console.warn('[AutoUpdater] Silent check notice:', err?.message || err)
     sendUpdateStatus({
-      state: 'error',
-      error: err?.message || 'Failed to check for updates'
+      state: 'idle'
     })
   })
 

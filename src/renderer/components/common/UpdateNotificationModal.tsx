@@ -47,7 +47,7 @@ export default function UpdateNotificationModal() {
   }, [])
 
   if (isDismissed) return null
-  if (updateStatus.state === 'idle' || updateStatus.state === 'not-available' || updateStatus.state === 'checking') {
+  if (updateStatus.state !== 'downloading' && updateStatus.state !== 'downloaded') {
     return null
   }
 
@@ -153,13 +153,6 @@ export default function UpdateNotificationModal() {
               <HiRocketLaunch size={16} />
               RESTART & APPLY UPDATE
             </button>
-          </div>
-        )}
-
-        {/* Error State */}
-        {updateStatus.state === 'error' && (
-          <div className="mt-3 text-xs text-rose-300">
-            {updateStatus.error || 'Failed to download update.'}
           </div>
         )}
       </motion.div>
