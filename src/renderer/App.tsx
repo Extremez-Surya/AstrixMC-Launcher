@@ -137,7 +137,7 @@ export default function App() {
   return (
     <HashRouter>
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#07080C] text-[var(--astrix-text-primary)] select-none font-sans transition-colors duration-300">
-        <GlobalAppBackground />
+        {activeAccount && <GlobalAppBackground />}
         <TitleBar
           onOpenLogs={() => setIsLogsOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}

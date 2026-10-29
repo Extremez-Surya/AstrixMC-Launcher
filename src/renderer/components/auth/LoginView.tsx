@@ -6,15 +6,12 @@ import {
   HiShieldCheck,
   HiBolt,
   HiChevronDown,
-  HiArrowPath,
-  HiPhoto
+  HiArrowPath
 } from 'react-icons/hi2'
 import { FaMicrosoft } from 'react-icons/fa6'
 import { useAuth } from '../../hooks/useAuth'
 import { getAccountAvatar } from '../../utils/avatar'
-import cherryBiomeImg from '../../assets/mc_cherry_biome.jpg'
 import villageSunsetImg from '../../assets/mc_village_sunset.jpg'
-import bountifulImg from '../../assets/mc_bountiful.jpg'
 
 // Floating animated embers/fireflies
 function AmbientEmbers() {
@@ -31,7 +28,7 @@ function AmbientEmbers() {
   }, [])
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
       {embers.map((e) => (
         <motion.div
           key={e.id}
@@ -61,7 +58,7 @@ function AmbientEmbers() {
   )
 }
 
-// Sleek Astrix Glowing Flame Emblem (Replaced the 3D cube)
+// Sleek Astrix Glowing Flame Emblem (Box logo removed)
 function AstrixFlameEmblem() {
   return (
     <div className="relative flex items-center justify-center w-20 h-20 mb-1">
@@ -101,12 +98,6 @@ function CreeperIcon() {
   )
 }
 
-const WALLPAPERS = [
-  { name: 'Cherry Grove 🌸', src: cherryBiomeImg },
-  { name: 'Village Sunset 🌅', src: villageSunsetImg },
-  { name: 'Lush Valley 🏔️', src: bountifulImg }
-]
-
 export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   const {
     accounts,
@@ -123,9 +114,6 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   const [offlineName, setOfflineName] = useState('')
   const [validationError, setValidationError] = useState('')
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false)
-  const [bgIndex, setBgIndex] = useState(0)
-
-  const activeBg = WALLPAPERS[bgIndex]
 
   const handleOfflineSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,56 +149,34 @@ export default function LoginView({ onComplete }: { onComplete?: () => void }) {
   }
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden font-sans select-none">
-      {/* ── CINEMATIC DYNAMIC MINECRAFT WALLPAPER (DIMMED & MOODY) ── */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeBg.name}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="absolute inset-0 pointer-events-none -z-10 overflow-hidden"
-        >
-          <img
-            src={activeBg.src}
-            alt={activeBg.name}
-            className="h-full w-full object-cover object-center filter brightness-[0.55] contrast-[1.12] saturate-[1.2]"
-          />
-          {/* Edge-to-edge dark dimmer and vignette */}
-          <div className="absolute inset-0 bg-[#06080E]/45" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/95 via-transparent to-[#06080E]/75" />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'radial-gradient(ellipse at 50% 50%, transparent 20%, rgba(6, 8, 14, 0.75) 70%, #06080E 100%)'
-            }}
-          />
-        </motion.div>
-      </AnimatePresence>
+    <div className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden font-sans select-none bg-[#07090E]">
+      {/* ── CINEMATIC DYNAMIC MINECRAFT VILLAGE SUNSET WALLPAPER (DIMMED & MOODY) ── */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <img
+          src={villageSunsetImg}
+          alt="Astrix Minecraft Village Sunset"
+          className="h-full w-full object-cover object-center filter brightness-[0.52] contrast-[1.12] saturate-[1.2] scale-105"
+        />
+        {/* Soft edge-to-edge dark dimmer and vignette */}
+        <div className="absolute inset-0 bg-[#06080E]/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#06080E]/95 via-transparent to-[#06080E]/80" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 50%, transparent 20%, rgba(6, 8, 14, 0.75) 70%, #06080E 100%)'
+          }}
+        />
+      </div>
 
       {/* Floating Animated Embers in background */}
       <AmbientEmbers />
 
-      {/* 1-Click Wallpaper Switcher Pill at bottom-left */}
-      <div className="absolute bottom-5 left-5 z-30">
-        <button
-          type="button"
-          onClick={() => setBgIndex((prev) => (prev + 1) % WALLPAPERS.length)}
-          title="Click to cycle wallpaper"
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-[#0A0D15]/80 px-3 py-1.5 text-xs font-bold text-zinc-300 hover:border-amber-500/40 hover:text-amber-400 backdrop-blur-xl shadow-lg transition-all"
-        >
-          <HiPhoto className="h-4 w-4 text-amber-400" />
-          <span>{activeBg.name}</span>
-        </button>
-      </div>
-
-      {/* ── THE CENTER FLOATING GLASS CARD ── */}
+      {/* ── THE CENTER FLOATING GLASS CARD (Z-20) ── */}
       <motion.div
         initial={{ opacity: 0, scale: 0.93, y: 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-20 flex flex-col items-center w-full max-w-[460px] rounded-[32px] border border-amber-500/35 bg-[#0C0F17]/92 px-8 pt-7 pb-6 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_45px_rgba(245,158,11,0.22)] ring-1 ring-black/60"
+        className="relative z-20 flex flex-col items-center w-full max-w-[460px] rounded-[32px] border border-amber-500/35 bg-[#0C0F17]/94 px-8 pt-7 pb-6 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_45px_rgba(245,158,11,0.22)] ring-1 ring-black/60"
       >
         {/* Ambient subtle border halo glow behind card */}
         <div className="absolute -inset-[1px] rounded-[33px] bg-gradient-to-b from-amber-500/35 via-orange-500/15 to-transparent blur-md opacity-70 pointer-events-none -z-10" />
