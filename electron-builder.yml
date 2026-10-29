@@ -8,6 +8,11 @@ publish:
 directories:
   buildResources: resources
   output: dist
+extraResources:
+  - from: resources
+    to: resources
+    filter:
+      - '**/*'
 files:
   - '!**/.vscode/*'
   - '!src/*'

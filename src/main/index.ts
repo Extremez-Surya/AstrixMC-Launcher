@@ -15,48 +15,102 @@ import { getSettings } from './services/settings'
 import { launchEngine } from './services/launcher/launch-engine'
 import { initAutoUpdater } from './services/auto-updater'
 
+// Enforce single instance lock to prevent duplicate launcher processes in Task Manager
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show()
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
+  })
+}
+
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
+function getTrayIcon(): nativeImage {
+  const candidatePaths = [
+    join(__dirname, '../../resources/icon.ico'),
+    join(process.resourcesPath, 'resources', 'icon.ico'),
+    join(process.resourcesPath, 'icon.ico'),
+    join(app.getAppPath(), 'resources', 'icon.ico'),
+    join(__dirname, '../../../resources/icon.ico')
+  ]
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      try {
+        const img = nativeImage.createFromPath(p)
+        if (!img.isEmpty()) return img
+      } catch {}
+    }
+  }
+  // Safe embedded fallback so Tray is GUARANTEED to appear even if icon file path shifts
+  return nativeImage.createFromBuffer(
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAA7SURBVDhPY/wPBAxUAIwMjAxQmgFNAQ7N+A2gqRm/ATQ1g89gYjWDMxghmhEZjBDNiAxGiGZ0v7EAADs5BhH+zBwYAAAAAElFTkSuQmCC',
+      'base64'
+    )
+  )
+}
+
 function createTray(): void {
-  const iconPath = join(__dirname, '../../resources/icon.ico')
-  if (existsSync(iconPath)) {
-    try {
-      const icon = nativeImage.createFromPath(iconPath)
-      tray = new Tray(icon)
-      tray.setToolTip('AstrixMC Launcher v4.2')
-      const contextMenu = Menu.buildFromTemplate([
-        {
-          label: 'Open AstrixMC Launcher',
-          click: () => {
-            if (mainWindow) {
-              if (!mainWindow.isVisible()) mainWindow.show()
-              if (mainWindow.isMinimized()) mainWindow.restore()
-              mainWindow.focus()
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Exit Launcher',
-          click: () => {
-            isQuitting = true
-            app.quit()
+  try {
+    const icon = getTrayIcon()
+    tray = new Tray(icon)
+    tray.setToolTip('AstrixMC Launcher v1.0.1')
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Open AstrixMC Launcher',
+        click: () => {
+          if (mainWindow) {
+            if (!mainWindow.isVisible()) mainWindow.show()
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            mainWindow.focus()
           }
         }
-      ])
-      tray.setContextMenu(contextMenu)
-      tray.on('double-click', () => {
-        if (mainWindow) {
-          if (!mainWindow.isVisible()) mainWindow.show()
+      },
+      { type: 'separator' },
+      {
+        label: 'Exit Launcher Completely',
+        click: () => {
+          isQuitting = true
+          if (tray) {
+            tray.destroy()
+            tray = null
+          }
+          app.quit()
+        }
+      }
+    ])
+    tray.setContextMenu(contextMenu)
+
+    // Left click toggles window
+    tray.on('click', () => {
+      if (mainWindow) {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide()
+        } else {
+          mainWindow.show()
           if (mainWindow.isMinimized()) mainWindow.restore()
           mainWindow.focus()
         }
-      })
-    } catch (err) {
-      console.warn('[Tray] Failed to initialize tray:', err)
-    }
+      }
+    })
+
+    tray.on('double-click', () => {
+      if (mainWindow) {
+        if (!mainWindow.isVisible()) mainWindow.show()
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+      }
+    })
+  } catch (err) {
+    console.warn('[Tray] Failed to initialize tray:', err)
   }
 }
 
@@ -95,15 +149,16 @@ function createWindow(): void {
     } catch {}
   })
 
-  // Prevent window destroy on close if minimizeToTray is active
+  // Prevent window destroy on close if minimizeToTray is active and tray exists
   mainWindow.on('close', (e) => {
     if (!isQuitting) {
       const settings = getSettings()
-      if (settings.minimizeToTray) {
+      if (settings.minimizeToTray && tray) {
         e.preventDefault()
         mainWindow?.hide()
         return false
       }
+      isQuitting = true
     }
     return true
   })
@@ -153,11 +208,12 @@ function registerWindowIPC(): void {
 
   ipcMain.on(IPC_CHANNELS.WINDOW_CLOSE, () => {
     const settings = getSettings()
-    if (settings.minimizeToTray) {
+    if (settings.minimizeToTray && tray) {
       mainWindow?.hide()
     } else {
       isQuitting = true
       mainWindow?.close()
+      app.quit()
     }
   })
 
@@ -206,6 +262,12 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  if (tray) {
+    try {
+      tray.destroy()
+    } catch {}
+    tray = null
+  }
   try {
     discordRpcService.disconnect()
   } catch {}
@@ -214,7 +276,8 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     const settings = getSettings()
-    if (!settings.minimizeToTray) {
+    if (!settings.minimizeToTray || !tray) {
+      isQuitting = true
       app.quit()
     }
   }

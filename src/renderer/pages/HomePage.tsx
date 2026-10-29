@@ -467,7 +467,7 @@ export default function HomePage() {
                     TODAY
                   </span>
                 </div>
-                <span className="font-mono text-xs text-slate-400">v1.0.0 Release (Oct 29)</span>
+                <span className="font-mono text-xs text-slate-400">v1.0.1 Release (Oct 29)</span>
               </div>
             </div>
 
@@ -548,7 +548,7 @@ export default function HomePage() {
                     WHAT'S NEW
                   </h4>
                   <p className="text-xs text-slate-300 mt-0.5">
-                    v1.0.0 Stable — Auto-Updater, Zero-Drop Downloads & Crash Fixes
+                    v1.0.1 Stable — System Tray & Single-Instance Engine
                   </p>
                 </div>
               </div>

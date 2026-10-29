@@ -78,7 +78,8 @@ export default function NewsPage() {
 
   // Track expanded cards (Today release expanded by default)
   const [expandedVersions, setExpandedVersions] = useState<Record<string, boolean>>({
-    'v1.0.0': true
+    'v1.0.1': true,
+    'v1.0.0': false
   })
 
   const toggleExpand = (version: string) => {
@@ -97,7 +98,7 @@ export default function NewsPage() {
     setTimeout(() => {
       setCheckingUpdate(false)
       playSound('success')
-      showToast('AstrixMC Launcher v1.0.0 is the latest stable release!')
+      showToast('AstrixMC Launcher v1.0.1 is the latest stable release!')
     }, 1100)
   }
 
@@ -205,7 +206,7 @@ export default function NewsPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                ACTIVE BUILD: v1.0.0 (Latest Release)
+                ACTIVE BUILD: v1.0.1 (Latest Release)
               </span>
             </div>
             <p className="mt-1 text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
@@ -257,7 +258,7 @@ export default function NewsPage() {
             </span>
             <span className="rounded-xl bg-emerald-500/20 px-3 py-1 font-mono text-xs font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-2 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>v1.0.0 · Production Stable Release</span>
+              <span>v1.0.1 · Production Stable Release</span>
             </span>
           </div>
 
