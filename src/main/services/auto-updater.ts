@@ -117,3 +117,4 @@ export function initAutoUpdater(win: BrowserWindow) {
 export function getCurrentUpdateStatus(): UpdateStatus {
   return currentStatus
 }
+

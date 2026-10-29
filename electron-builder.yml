@@ -19,11 +19,9 @@ files:
 win:
   icon: resources/icon.ico
   executableName: AstrixMC-Launcher
+  requestedExecutionLevel: asInvoker
   target:
     - target: nsis
-      arch:
-        - x64
-    - target: portable
       arch:
         - x64
 nsis:
@@ -31,7 +29,8 @@ nsis:
   shortcutName: AstrixMC Launcher
   uninstallDisplayName: AstrixMC Launcher
   createDesktopShortcut: always
+  createStartMenuShortcut: true
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
-portable:
-  artifactName: AstrixMC-Launcher-Portable-${version}.${ext}
+  deleteAppDataOnUninstall: false
