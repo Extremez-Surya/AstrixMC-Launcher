@@ -112,6 +112,41 @@ class LaunchEngine {
     }
   }
 
+  private killProcessTree(pid: number): void {
+    if (!pid || typeof pid !== 'number' || isNaN(pid) || pid <= 0) return
+
+    // 1. Direct Node ChildProcess kill
+    if (this.activeProcess && this.activeProcess.pid === pid) {
+      try {
+        this.activeProcess.kill('SIGKILL')
+      } catch {}
+    }
+
+    // 2. OS-level process tree termination
+    if (process.platform === 'win32') {
+      try {
+        execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore', windowsHide: true })
+        console.log(`[LaunchEngine] Successfully terminated process tree for PID ${pid} via taskkill`)
+      } catch {
+        try {
+          execSync(
+            `powershell -NoProfile -NonInteractive -Command "Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue"`,
+            { stdio: 'ignore', windowsHide: true }
+          )
+          console.log(`[LaunchEngine] Terminated PID ${pid} via PowerShell fallback`)
+        } catch {}
+      }
+    } else {
+      try {
+        execSync(`pkill -P ${pid} -9 || kill -9 ${pid}`, { stdio: 'ignore' })
+      } catch {
+        try {
+          process.kill(pid, 'SIGKILL')
+        } catch {}
+      }
+    }
+  }
+
   private saveRunningGame(info: RunningGameInfo): void {
     try {
       const filePath = join(getLauncherRoot(), 'running_game.json')
@@ -281,12 +316,9 @@ class LaunchEngine {
       this.startProcessMonitor(proc.pid)
     }
     if (this.isCancelled) {
-      try {
-        if (proc && proc.pid) {
-          spawn('taskkill', ['/pid', String(proc.pid), '/f', '/t'], { shell: true })
-        }
-        proc.kill('SIGKILL')
-      } catch {}
+      if (proc && proc.pid) {
+        this.killProcessTree(proc.pid)
+      }
       this.activeProcess = null
     }
   }
@@ -302,7 +334,7 @@ class LaunchEngine {
           progress: 5,
           message: `Closing running game to connect to ${config.serverAddress}...`
         })
-        this.stop()
+        await this.stop()
         // Wait for previous process to cleanly exit
         await new Promise((resolve) => setTimeout(resolve, 1000))
       } else {
@@ -705,13 +737,7 @@ class LaunchEngine {
         .then((child: any) => {
           if (this.isCancelled || !child) {
             if (child && child.pid) {
-              try {
-                spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { shell: true })
-              } catch {
-                try {
-                  child.kill('SIGKILL')
-                } catch {}
-              }
+              this.killProcessTree(child.pid)
             }
             this.handleGameExited(0)
             return
@@ -780,10 +806,15 @@ class LaunchEngine {
     }
   }
 
-  public stop(): boolean {
+  public async stop(): Promise<boolean> {
     this.isCancelled = true
-    this.isGameRunning = false
     this.stopProcessMonitor()
+
+    this.sendProgress({
+      stage: 'stopping' as any,
+      progress: 100,
+      message: 'Stopping Minecraft...'
+    })
 
     if (this.activeClient) {
       try {
@@ -793,17 +824,31 @@ class LaunchEngine {
       this.activeClient = null
     }
 
-    // Only kill the exact PID started by this launcher
+    // Force terminate the exact process tree started by this launcher
     const pidToKill = this.runningGamePid || (this.activeProcess && this.activeProcess.pid)
     if (pidToKill) {
-      try {
-        spawn('taskkill', ['/pid', String(pidToKill), '/f', '/t'], { shell: true })
-      } catch {
-        try {
-          process.kill(pidToKill, 'SIGKILL')
-        } catch {}
+      this.sendConsoleLog(`[AstrixMC Launcher] Terminating game process tree (PID: ${pidToKill})...`)
+      this.killProcessTree(pidToKill)
+
+      // Ensure process is truly dead before clearing state
+      for (let i = 0; i < 12; i++) {
+        if (!this.isProcessAlive(pidToKill)) break
+        await new Promise((r) => setTimeout(r, 100))
+        if (i % 4 === 0) {
+          this.killProcessTree(pidToKill)
+        }
       }
       this.activeProcess = null
+    }
+
+    // Safety check on Windows: also ensure no lingering Minecraft Java processes remain
+    if (process.platform === 'win32') {
+      try {
+        execSync(
+          `powershell -NoProfile -NonInteractive -Command "$p = Get-Process -Name 'javaw', 'java' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -match 'Minecraft' }; if ($p) { $p | Stop-Process -Force }"`,
+          { stdio: 'ignore', windowsHide: true }
+        )
+      } catch {}
     }
 
     this.handleGameExited(0)

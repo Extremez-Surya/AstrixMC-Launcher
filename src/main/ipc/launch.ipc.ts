@@ -18,8 +18,8 @@ export function registerLaunchIPC(): void {
     return await launchEngine.launch(config)
   })
 
-  ipcMain.handle(IPC_CHANNELS.LAUNCH_STOP, () => {
-    return launchEngine.stop()
+  ipcMain.handle(IPC_CHANNELS.LAUNCH_STOP, async () => {
+    return await launchEngine.stop()
   })
 
   ipcMain.handle(IPC_CHANNELS.LAUNCH_GET_STATUS, () => {

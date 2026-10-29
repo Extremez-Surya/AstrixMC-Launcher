@@ -374,14 +374,21 @@ export default function HomePage() {
               onClick={() => handlePlay()}
               disabled={isLaunching}
               className={`relative flex items-center justify-center gap-3 rounded-2xl px-12 md:px-14 py-3.5 text-base md:text-lg font-black tracking-wide transition-all duration-300 ${
-                isPlaying
+                (progress?.stage as string) === 'stopping'
+                  ? 'bg-gradient-to-r from-rose-700 to-amber-600 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] cursor-wait'
+                  : isPlaying
                   ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] hover:brightness-110'
                   : isLaunching
                   ? 'bg-amber-500/50 text-black/70 cursor-wait'
                   : 'bg-gradient-to-r from-[#F59E0B] via-[#EAB308] to-[#D97706] text-black shadow-[0_0_35px_rgba(245,158,11,0.45)] hover:shadow-[0_0_50px_rgba(245,158,11,0.65)] hover:scale-[1.02] active:scale-[0.98]'
               }`}
             >
-              {isPlaying ? (
+              {(progress?.stage as string) === 'stopping' ? (
+                <>
+                  <HiArrowPath className="h-6 w-6 animate-spin" />
+                  <span>Stopping...</span>
+                </>
+              ) : isPlaying ? (
                 <>
                   <HiStop className="h-6 w-6" />
                   <span>Stop Game</span>

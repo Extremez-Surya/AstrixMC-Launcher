@@ -60,6 +60,8 @@ export const useLaunchStore = create<LaunchState>((set, get) => ({
       set({ isLaunching: false, isPlaying: false, error: progress.message })
     } else if (progress.stage === 'idle') {
       set({ isLaunching: false, isPlaying: false, progress: null })
+    } else if ((progress.stage as string) === 'stopping') {
+      set({ isLaunching: true })
     }
   },
 
@@ -99,14 +101,37 @@ export const useLaunchStore = create<LaunchState>((set, get) => ({
   },
 
   stopGame: async () => {
-    set({ isPlaying: false, isLaunching: false, progress: null })
+    set({
+      isLaunching: true,
+      progress: {
+        stage: 'stopping' as any,
+        progress: 100,
+        message: 'Stopping Minecraft...'
+      }
+    })
     try {
       if (window.electronAPI?.stopGame) {
         await window.electronAPI.stopGame()
       }
-      return true
-    } catch {
-      return true
+    } catch (err) {
+      console.warn('[LaunchStore] stopGame error:', err)
+    } finally {
+      // Re-verify actual game status from backend
+      try {
+        if (window.electronAPI?.getLaunchStatus) {
+          const status = await window.electronAPI.getLaunchStatus()
+          if (status?.isRunning) {
+            set({
+              isPlaying: true,
+              isLaunching: false,
+              progress: { stage: 'running', progress: 100, message: 'Game is still running' }
+            })
+            return false
+          }
+        }
+      } catch {}
+      set({ isPlaying: false, isLaunching: false, progress: null })
     }
+    return true
   }
 }))

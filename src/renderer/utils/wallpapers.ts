@@ -29,3 +29,4 @@ export const ROTATING_WALLPAPERS: WallpaperItem[] = [
   { id: 'cave', name: 'Lush Glowberry Caverns', src: caveBackdropImg },
   { id: 'castle', name: 'Night Mountain Castle', src: nightCastleImg }
 ]
+
