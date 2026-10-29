@@ -615,13 +615,14 @@ class LaunchEngine {
       const minMemStr = `${resolvedMin}G`
 
       // Options for MCLC
+      const maxDownloadSockets = Math.max(2, Math.min(8, Number(settings.simultaneousDownloads) || 6))
       const opts: any = {
         authorization: mclcAuth,
         root: gameDirectory,
         overrides: {
           detached: false,
           windowsHide: true,
-          maxSockets: 64,
+          maxSockets: maxDownloadSockets,
           assetRoot: join(getLauncherRoot(), 'assets')
         },
         version: {

@@ -210,6 +210,7 @@ const SYSTEM_MOD_IDS = new Set([
   'forge',
   'neoforge',
   'java',
+  'mixinextras',
   'fabric-language-kotlin',
   'fabric-language-scala'
 ])
