@@ -11,17 +11,25 @@ export async function fetchJSON<T>(
       ? (optionsOrHeaders.headers as Record<string, string>)
       : ((optionsOrHeaders as Record<string, string>) ?? {})
 
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'AstrixMCLauncher/1.0',
-      Accept: 'application/json',
-      ...customHeaders
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout for metadata
+
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'AstrixMCLauncher/1.0',
+        Accept: 'application/json',
+        ...customHeaders
+      }
+    })
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} for ${url}`)
     }
-  })
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`)
+    return (await res.json()) as T
+  } finally {
+    clearTimeout(timeoutId)
   }
-  return (await res.json()) as T
 }
 
 /** Download a file to disk, reporting progress (bytes) to the callback */

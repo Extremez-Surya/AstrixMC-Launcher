@@ -69,6 +69,15 @@ export default function InstancesPage() {
     message: string
   } | null>(null)
 
+  useEffect(() => {
+    if (activeNotification && !activeNotification.message.toLowerCase().includes('downloading') && !activeNotification.message.toLowerCase().includes('installing')) {
+      const timer = setTimeout(() => {
+        setActiveNotification(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [activeNotification])
+
   // Modloader Distribution Counts
   const fabricCount = useMemo(() => instances.filter((i) => i.modLoader?.type?.toLowerCase() === 'fabric').length, [instances])
   const forgeCount = useMemo(() => instances.filter((i) => i.modLoader?.type?.toLowerCase() === 'forge').length, [instances])

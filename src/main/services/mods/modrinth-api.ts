@@ -94,11 +94,24 @@ export async function getModrinthProject(id: string): Promise<any> {
   return await fetchJSON(`${MODRINTH_API}/project/${id}`)
 }
 
+const versionsCache = new Map<string, { timestamp: number; data: ModrinthVersion[] }>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache
+
 export async function getModrinthVersions(
   projectId: string,
   loader?: string,
   gameVersion?: string
 ): Promise<ModrinthVersion[]> {
+  const cleanProj = (projectId || '').trim().toLowerCase()
+  const cleanLoader = (loader || '').trim().toLowerCase()
+  const cleanVer = (gameVersion || '').trim().toLowerCase()
+  const cacheKey = `${cleanProj}|${cleanLoader}|${cleanVer}`
+
+  const cached = versionsCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
   const params = new URLSearchParams()
   if (loader && loader !== 'All Loaders') {
     params.set('loaders', JSON.stringify([loader.toLowerCase()]))
@@ -108,26 +121,14 @@ export async function getModrinthVersions(
   }
 
   try {
-    const url = `${MODRINTH_API}/project/${projectId}/version?${params.toString()}`
+    const url = `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params.toString()}`
     const res = await fetchJSON<ModrinthVersion[]>(url)
-    if (Array.isArray(res) && res.length > 0) return res
-  } catch {}
-
-  // Resilient fallback: fetch all versions of project and filter in-memory
-  try {
-    const rawUrl = `${MODRINTH_API}/project/${projectId}/version`
-    const all = await fetchJSON<ModrinthVersion[]>(rawUrl)
-    if (Array.isArray(all)) {
-      const filtered = all.filter((v) => {
-        const matchLoader =
-          !loader || loader === 'All Loaders' || v.loaders.some((l) => l.toLowerCase() === loader.toLowerCase())
-        const matchVersion =
-          !gameVersion || gameVersion === 'All Versions' || v.game_versions.includes(gameVersion)
-        return matchLoader && matchVersion
-      })
-      if (filtered.length > 0) return filtered
+    if (Array.isArray(res)) {
+      versionsCache.set(cacheKey, { timestamp: Date.now(), data: res })
+      return res
     }
   } catch {}
 
+  versionsCache.set(cacheKey, { timestamp: Date.now(), data: [] })
   return []
 }

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, unlin
 import { join } from 'path'
 import AdmZip from 'adm-zip'
 import { BrowserWindow } from 'electron'
-import { downloadFile } from '../http'
+import { downloadFile, runLimited } from '../http'
 import { getInstance } from '../instances/instance-manager'
 import { getModrinthVersions, searchModrinth } from './modrinth-api'
 import type { InstalledMod } from '../../../shared/types/mod'
@@ -94,7 +94,8 @@ export async function installModFile(
   downloadUrl: string,
   fileName: string,
   folderType: 'mods' | 'shaderpacks' | 'resourcepacks' = 'mods',
-  dependencies?: any[]
+  dependencies?: any[],
+  skipDepResolution: boolean = false
 ): Promise<{ success: boolean; error?: string }> {
   const inst = getInstance(instanceId)
   if (!inst) return { success: false, error: 'Instance not found' }
@@ -181,7 +182,7 @@ export async function installModFile(
     }
 
     // 5. Automatically resolve and install dependencies in background (INSTANT response for Discover UI!)
-    if (folderType === 'mods') {
+    if (folderType === 'mods' && !skipDepResolution) {
       const loader = inst.modLoader?.type || 'fabric'
       resolveMissingModDependencies(targetDir, inst.mcVersion, loader, destPath).catch((err) => {
         console.warn('[AstrixMC ModManager] Dependency resolution notice:', err)
@@ -507,9 +508,14 @@ export async function installFpsBoostPack(
 
   const loader = inst.modLoader?.type || 'fabric'
   const version = inst.mcVersion || '1.20.4'
+  const modsDir = join(inst.gameDirectory, 'mods')
+
+  if (!existsSync(modsDir)) {
+    mkdirSync(modsDir, { recursive: true })
+  }
 
   // Pre-clean any corrupt or incomplete jar files first
-  cleanCorruptJars(join(inst.gameDirectory, 'mods'))
+  cleanCorruptJars(modsDir)
 
   onProgress?.(`Checking FPS mod compatibility for Minecraft ${version} (${loader})...`)
   const compatibilityList = await checkFpsBoostCompatibility(version, loader)
@@ -526,22 +532,50 @@ export async function installFpsBoostPack(
     }
   }
 
+  // Check already downloaded jars to avoid redundant re-downloading
+  const existingFiles = readdirSync(modsDir).map((f) => f.toLowerCase())
+  const modsToDownload: typeof compatibleMods = []
+
   for (const mod of compatibleMods) {
-    try {
-      onProgress?.(`Installing ${mod.name} (${mod.filename})...`)
-      const res = await installModFile(instanceId, mod.downloadUrl!, mod.filename!)
-      if (res.success) {
-        installed.push(mod.name)
-      } else {
-        errors.push(`Failed to download ${mod.name}: ${res.error}`)
-      }
-    } catch (err) {
-      errors.push(`Error installing ${mod.name}: ${err instanceof Error ? err.message : String(err)}`)
+    const fnLower = (mod.filename || '').toLowerCase()
+    const slugLower = (mod.slug || '').toLowerCase()
+    const alreadyInstalled = existingFiles.some(
+      (f) => f === fnLower || (f.endsWith('.jar') && (f.includes(slugLower) || (slugLower === 'fabric-api' && f.includes('fabric-api'))))
+    )
+    if (alreadyInstalled) {
+      installed.push(mod.name)
+    } else {
+      modsToDownload.push(mod)
     }
   }
 
+  if (modsToDownload.length > 0) {
+    let completed = 0
+    onProgress?.(`Fast downloading ${modsToDownload.length} FPS optimization mods in parallel...`)
+    
+    // Download remaining mods in parallel with concurrency limit of 6
+    await runLimited(modsToDownload, 6, async (mod) => {
+      try {
+        sendInAppLog(`[AstrixMC FPS Boost] Downloading ${mod.name} (${++completed}/${modsToDownload.length})...`)
+        const res = await installModFile(instanceId, mod.downloadUrl!, mod.filename!, 'mods', undefined, true)
+        if (res.success) {
+          installed.push(mod.name)
+        } else {
+          errors.push(`Failed to download ${mod.name}: ${res.error}`)
+        }
+      } catch (err) {
+        errors.push(`Error installing ${mod.name}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    })
+  }
+
   // Final verification sweep in mods directory to guarantee 0 broken files
-  cleanCorruptJars(join(inst.gameDirectory, 'mods'))
+  cleanCorruptJars(modsDir)
+
+  // Single sweep to ensure core runtime libraries are linked
+  if (loader === 'fabric' || loader === 'quilt') {
+    resolveMissingModDependencies(modsDir, version, loader).catch(() => {})
+  }
 
   return { success: installed.length > 0, installed, errors }
 }
