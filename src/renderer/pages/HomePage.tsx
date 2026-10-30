@@ -6,6 +6,9 @@ import {
   HiStop,
   HiArrowPath,
   HiPlus,
+  HiMinus,
+  HiArrowsPointingOut,
+  HiPause,
   HiFolderOpen,
   HiPuzzlePiece,
   HiAdjustmentsHorizontal,
@@ -321,49 +324,89 @@ export default function HomePage() {
             {/* Soft shadow at feet */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-6 w-44 rounded-[100%] bg-black/60 blur-md -z-10" />
           </div>
+        </div>
 
-          {/* Vertical Camera Controls Bar (Right beside character, like Image 2 Rock Client) */}
-          <div className="absolute right-[-48px] top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 rounded-2xl border border-white/[0.12] bg-[#0A0E18]/85 p-1.5 backdrop-blur-2xl shadow-xl z-20">
-            <button
-              onClick={() => setSkinKey((k) => k + 1)}
-              title="Reset Rotation"
-              className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition-all text-xs"
-            >
-              ↺
-            </button>
-            <button
-              onClick={() => setSkinKey((k) => k + 1)}
-              title="Center Character"
-              className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition-all text-xs"
-            >
-              ⛶
-            </button>
-            <button
-              onClick={() => setSkinZoom((z) => Math.min(z + 0.15, 1.5))}
-              title="Zoom In"
-              className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition-all font-bold text-xs"
-            >
-              +
-            </button>
-            <button
-              onClick={() => setSkinZoom((z) => Math.max(z - 0.15, 0.7))}
-              title="Zoom Out"
-              className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-white/[0.12] hover:text-white transition-all font-bold text-xs"
-            >
-              −
-            </button>
-            <button
-              onClick={() => setSkinAnimation((prev) => (prev === 'idle' ? 'none' : 'idle'))}
-              title={skinAnimation === 'idle' ? 'Pause Skin Animation' : 'Resume Skin Animation'}
-              className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all text-[10px] ${
-                skinAnimation === 'idle'
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-white/[0.04] text-zinc-500 hover:text-white'
-              }`}
-            >
-              {skinAnimation === 'idle' ? '▶' : '⏸'}
-            </button>
+        {/* ── ASTRIX 3D VIEW CONTROLLER (DOCKED ON RIGHT SIDE OF VIEWPORT) ── */}
+        <div className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 pointer-events-auto z-20 flex flex-col items-center gap-1.5 rounded-2xl border border-white/[0.1] bg-[#0A0E18]/85 p-2 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] ring-1 ring-white/[0.04]">
+          {/* Astrix 3D Tag */}
+          <div className="flex items-center gap-1 px-1.5 py-0.5 mb-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black uppercase tracking-wider text-emerald-400 select-none">
+            <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34D399]" />
+            <span>3D</span>
           </div>
+
+          {/* Reset Rotation */}
+          <button
+            onClick={() => setSkinKey((k) => k + 1)}
+            title="Reset Rotation"
+            className="group relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30 border border-transparent transition-all"
+          >
+            <HiArrowPath className="h-4 w-4 transition-transform group-hover:-rotate-90 duration-300" />
+            <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
+              Reset Rotation
+            </span>
+          </button>
+
+          {/* Center Character */}
+          <button
+            onClick={() => {
+              setSkinZoom(1.0)
+              setSkinKey((k) => k + 1)
+            }}
+            title="Center Character"
+            className="group relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30 border border-transparent transition-all"
+          >
+            <HiArrowsPointingOut className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
+              Center View
+            </span>
+          </button>
+
+          {/* Zoom In */}
+          <button
+            onClick={() => setSkinZoom((z) => Math.min(z + 0.15, 1.5))}
+            title="Zoom In"
+            className="group relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30 border border-transparent transition-all"
+          >
+            <HiPlus className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
+              Zoom In
+            </span>
+          </button>
+
+          {/* Zoom Out */}
+          <button
+            onClick={() => setSkinZoom((z) => Math.max(z - 0.15, 0.7))}
+            title="Zoom Out"
+            className="group relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/30 border border-transparent transition-all"
+          >
+            <HiMinus className="h-4 w-4 transition-transform group-hover:scale-110" />
+            <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
+              Zoom Out
+            </span>
+          </button>
+
+          {/* Subtle Divider */}
+          <div className="h-[1px] w-5 bg-white/10 my-0.5" />
+
+          {/* Animation Play/Pause Toggle */}
+          <button
+            onClick={() => setSkinAnimation((prev) => (prev === 'idle' ? 'none' : 'idle'))}
+            title={skinAnimation === 'idle' ? 'Pause Animation' : 'Resume Animation'}
+            className={`group relative flex h-8 w-8 items-center justify-center rounded-xl transition-all ${
+              skinAnimation === 'idle'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                : 'bg-white/[0.04] text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200 border border-transparent'
+            }`}
+          >
+            {skinAnimation === 'idle' ? (
+              <HiPause className="h-4 w-4 text-emerald-400" />
+            ) : (
+              <HiPlay className="h-4 w-4 text-zinc-400" />
+            )}
+            <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
+              {skinAnimation === 'idle' ? 'Pause Animation' : 'Play Animation'}
+            </span>
+          </button>
         </div>
       </div>
 
