@@ -116,9 +116,34 @@ export default function InstanceDetailPage() {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
   const logTerminalRef = useRef<HTMLDivElement>(null)
 
+  const [isOptimizing, setIsOptimizing] = useState(false)
+
   const showToast = (msg: string) => {
     setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3000)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
+
+  const handle1ClickOptimize = async () => {
+    if (!instance || !window.electronAPI?.installMod) return
+    playSound('click')
+    setIsOptimizing(true)
+    showToast('⚡ Injecting Ultra FPS Boost stack (Sodium, Iris, Lithium)...')
+    try {
+      const res = await window.electronAPI.installMod({ instanceId: instance.id, isFpsPack: true })
+      if (res.success) {
+        playSound('success')
+        showToast(`🚀 FPS Boost active! (Installed ${res.installed.join(', ')})`)
+        await loadContent()
+      } else {
+        playSound('error')
+        showToast(res.errors?.[0] || 'No matching optimization mods available')
+      }
+    } catch {
+      playSound('error')
+      showToast('Failed to install FPS optimization pack')
+    } finally {
+      setIsOptimizing(false)
+    }
   }
 
   // Loader metadata & icons
@@ -426,7 +451,7 @@ export default function InstanceDetailPage() {
         </div>
 
         {/* ══════════ MODRINTH INSTANCE HERO HEADER ══════════ */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0E1420]/90 p-6 backdrop-blur-2xl shadow-2xl">
+        <div className="relative rounded-3xl border border-white/10 bg-[#0E1420]/90 p-6 backdrop-blur-2xl shadow-2xl z-30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             
             {/* Left: Instance Icon + Name + Meta */}
@@ -461,7 +486,7 @@ export default function InstanceDetailPage() {
               </div>
             </div>
 
-            {/* Right: Actions (Big Green Play Button, Gear Settings, Three Dots) */}
+            {/* Right: Actions (Big Green Play Button, 1-Click Optimize, Gear Settings, Three Dots) */}
             <div className="flex items-center gap-3">
               {/* Play / Stop Button */}
               {isPlaying ? (
@@ -488,6 +513,27 @@ export default function InstanceDetailPage() {
                   <span>{isLaunching ? 'LAUNCHING...' : 'PLAY'}</span>
                 </button>
               )}
+
+              {/* 1-Click FPS Optimization Button */}
+              <button
+                type="button"
+                onClick={handle1ClickOptimize}
+                disabled={isOptimizing}
+                className="flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-4 py-3 font-display text-xs font-bold text-amber-300 shadow-lg shadow-amber-500/10 active:scale-95 transition-all disabled:opacity-50"
+                title="1-Click FPS Optimization (Sodium, Iris, Lithium)"
+              >
+                {isOptimizing ? (
+                  <>
+                    <HiArrowPath className="animate-spin text-amber-400" size={16} />
+                    <span>Optimizing...</span>
+                  </>
+                ) : (
+                  <>
+                    <HiBolt size={16} className="text-amber-400" />
+                    <span>1-Click Optimize</span>
+                  </>
+                )}
+              </button>
 
               {/* Gear Settings Button */}
               <button
@@ -519,8 +565,22 @@ export default function InstanceDetailPage() {
                       initial={{ opacity: 0, scale: 0.95, y: -4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                      className="absolute right-0 top-13 z-50 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#0B0F19]/95 p-1.5 shadow-2xl backdrop-blur-2xl"
+                      className="absolute right-0 top-13 z-50 w-56 rounded-2xl border border-white/10 bg-[#0B0F19]/95 p-1.5 shadow-2xl backdrop-blur-2xl ring-1 ring-black/50"
                     >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsHeaderMenuOpen(false)
+                          handle1ClickOptimize()
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/15 transition-colors"
+                      >
+                        <HiBolt size={16} className="text-amber-400" />
+                        <span>1-Click FPS Optimize</span>
+                      </button>
+
+                      <div className="my-1 border-t border-white/5" />
+
                       <button
                         type="button"
                         onClick={() => {
@@ -723,7 +783,26 @@ export default function InstanceDetailPage() {
                 <p className="mt-1 text-xs text-slate-400 max-w-sm">
                   Browse or upload projects to get started with mods, resource packs, and shaders.
                 </p>
-                <div className="mt-6 flex items-center gap-3">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handle1ClickOptimize}
+                    disabled={isOptimizing}
+                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:brightness-110 px-5 py-2.5 text-xs font-bold text-black transition-all shadow-lg shadow-amber-500/25 active:scale-95 disabled:opacity-50"
+                  >
+                    {isOptimizing ? (
+                      <>
+                        <HiArrowPath className="animate-spin text-black" size={16} />
+                        <span>Optimizing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <HiBolt size={16} />
+                        <span>1-Click FPS Optimization</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => openInstanceFolder(instance.id, contentCategory)}
