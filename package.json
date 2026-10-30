@@ -1,6 +1,6 @@
 {
   "name": "astrix-mc-launcher",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AstrixMC Launcher - High Performance Custom Minecraft Client",
   "main": "./out/main/index.js",
   "scripts": {
