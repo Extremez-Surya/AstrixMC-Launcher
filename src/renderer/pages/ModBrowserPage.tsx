@@ -226,16 +226,9 @@ export default function ModBrowserPage() {
         instVersion
       )
 
-      // Fallback: query without strict version filter to check compatibility manually
+      // Fallback: if empty, query generic versions without strict loader/version filter
       if (!Array.isArray(versions) || versions.length === 0) {
-        const allVersions = await window.electronAPI?.getModVersions(mod.source, mod.id)
-        if (Array.isArray(allVersions)) {
-          versions = allVersions.filter(
-            (v: any) =>
-              (!v.game_versions || v.game_versions.length === 0 || v.game_versions.includes(instVersion)) &&
-              (!v.loaders || v.loaders.length === 0 || v.loaders.includes(instLoader.toLowerCase()))
-          )
-        }
+        versions = await window.electronAPI?.getModVersions(mod.source, mod.id)
       }
 
       if (Array.isArray(versions) && versions.length > 0 && versions[0].files?.length > 0) {

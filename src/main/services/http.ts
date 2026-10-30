@@ -1,4 +1,4 @@
-import { createWriteStream, existsSync, mkdirSync } from 'fs'
+import { createWriteStream, existsSync, mkdirSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
 
 /** GET a JSON document with a browser-ish UA (CDNs reject bare node agents) */
@@ -41,8 +41,19 @@ export async function downloadFile(
       ...headers
     }
   })
-  if (!res.ok || !res.body) {
+  if (!res.ok) {
     throw new Error(`Download failed (${res.status}) for ${url}`)
+  }
+
+  // Fast direct buffer write for individual files without progress listeners (mods, assets, textures)
+  if (!onProgress) {
+    const arrayBuffer = await res.arrayBuffer()
+    writeFileSync(dest, Buffer.from(arrayBuffer))
+    return
+  }
+
+  if (!res.body) {
+    throw new Error(`Download body empty for ${url}`)
   }
   const total = Number(res.headers.get('content-length') ?? 0)
   const reader = res.body.getReader()

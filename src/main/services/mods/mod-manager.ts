@@ -151,23 +151,25 @@ export async function installModFile(
         )
 
       if (!hasShaderEngine) {
-        try {
-          const versions = await getModrinthVersions(shaderModSlug, loader, inst.mcVersion)
-          if (versions && versions.length > 0 && versions[0].files.length > 0) {
-            const file = versions[0].files.find((f) => f.primary) || versions[0].files[0]
-            await installModFile(instanceId, file.url, file.filename, 'mods')
-            sendInAppLog(`[AstrixMC ModManager] Installed ${shaderModSlug} for in-game shaders`)
-          }
-        } catch (err) {
-          sendInAppLog(`[AstrixMC ModManager] Notice: Could not auto-install ${shaderModSlug}`)
-        }
+        // Run in background without blocking shaderpack installation completion
+        getModrinthVersions(shaderModSlug, loader, inst.mcVersion)
+          .then(async (versions) => {
+            if (versions && versions.length > 0 && versions[0].files.length > 0) {
+              const file = versions[0].files.find((f) => f.primary) || versions[0].files[0]
+              await installModFile(instanceId, file.url, file.filename, 'mods')
+              sendInAppLog(`[AstrixMC ModManager] Installed ${shaderModSlug} for in-game shaders`)
+            }
+          })
+          .catch(() => {})
       }
     }
 
-    // 5. Automatically resolve and install dependencies directly from internal jar & Modrinth
+    // 5. Automatically resolve and install dependencies in background (INSTANT response for Discover UI!)
     if (folderType === 'mods') {
       const loader = inst.modLoader?.type || 'fabric'
-      await resolveMissingModDependencies(targetDir, inst.mcVersion, loader)
+      resolveMissingModDependencies(targetDir, inst.mcVersion, loader, destPath).catch((err) => {
+        console.warn('[AstrixMC ModManager] Dependency resolution notice:', err)
+      })
     }
 
     return { success: true }
@@ -211,18 +213,21 @@ const SYSTEM_MOD_IDS = new Set([
   'neoforge',
   'java',
   'mixinextras',
+  'mixinsquared',
+  'optifine',
   'fabric-language-kotlin',
   'fabric-language-scala'
 ])
 
 /**
- * Scans all jars in mods directory, extracts fabric.mod.json dependencies,
+ * Scans newly installed jar (or all jars) in mods directory, extracts dependencies,
  * and automatically downloads any missing required library from Modrinth!
  */
 export async function resolveMissingModDependencies(
   modsDir: string,
   mcVersion: string,
-  loader: string = 'fabric'
+  loader: string = 'fabric',
+  targetModPath?: string
 ): Promise<string[]> {
   if (!existsSync(modsDir)) return []
   const files = readdirSync(modsDir).filter((f) => f.endsWith('.jar'))
@@ -231,8 +236,23 @@ export async function resolveMissingModDependencies(
   const providedIds = new Set<string>()
   const requiredDeps = new Map<string, string>()
 
+  // Files to inspect for missing dependencies
+  const filesToInspect = targetModPath && existsSync(targetModPath)
+    ? [targetModPath]
+    : files.map((f) => join(modsDir, f))
+
+  // Fast registration of provided IDs across all existing jars
   for (const file of files) {
-    const fullPath = join(modsDir, file)
+    const base = file.toLowerCase()
+    if (base.includes('fabric-api')) providedIds.add('fabric-api')
+    if (base.includes('architectury')) providedIds.add('architectury')
+    if (base.includes('cloth-config')) providedIds.add('cloth-config')
+    if (base.includes('yacl') || base.includes('yet-another-config-lib')) providedIds.add('yacl')
+    if (base.includes('sodium')) providedIds.add('sodium')
+    if (base.includes('iris')) providedIds.add('iris')
+  }
+
+  for (const fullPath of filesToInspect) {
     try {
       const zip = new AdmZip(fullPath)
       const entry = zip.getEntry('fabric.mod.json')
@@ -245,9 +265,27 @@ export async function resolveMissingModDependencies(
         if (data.depends && typeof data.depends === 'object') {
           for (const depId of Object.keys(data.depends)) {
             if (!SYSTEM_MOD_IDS.has(depId)) {
-              requiredDeps.set(depId, data.name || data.id || file)
+              requiredDeps.set(depId, data.name || data.id || fullPath)
             }
           }
+        }
+      }
+
+      // Check Jar-in-Jar (JiJ) entries so bundled libraries are not searched/downloaded
+      const zipEntries = zip.getEntries()
+      for (const e of zipEntries) {
+        if (e.entryName.startsWith('META-INF/jars/') && e.entryName.endsWith('.jar')) {
+          try {
+            const subZip = new AdmZip(e.getData())
+            const subEntry = subZip.getEntry('fabric.mod.json')
+            if (subEntry) {
+              const subData = JSON.parse(subEntry.getData().toString('utf8'))
+              if (subData.id) providedIds.add(subData.id)
+              if (Array.isArray(subData.provides)) {
+                subData.provides.forEach((p: string) => providedIds.add(p))
+              }
+            }
+          } catch {}
         }
       }
     } catch {
@@ -255,7 +293,7 @@ export async function resolveMissingModDependencies(
     }
   }
 
-  const hasFabricApi =
+  let hasFabricApi =
     providedIds.has('fabric-api') ||
     files.some((f) => f.toLowerCase().includes('fabric-api'))
 
@@ -264,15 +302,20 @@ export async function resolveMissingModDependencies(
     if (providedIds.has(depId)) continue
 
     // If fabric-api is present, all internal submodules (fabric-resource-loader, fabric-screen-api, etc.) are satisfied
-    if (hasFabricApi && (depId.startsWith('fabric-') || depId.startsWith('fabric_'))) {
+    if (hasFabricApi && (depId.startsWith('fabric-') || depId.startsWith('fabric_') || depId.startsWith('fabric-api-'))) {
       continue
     }
 
-    // If it's a fabric submodule but fabric-api itself is missing, install fabric-api
+    // If it's a fabric submodule but fabric-api itself is missing, install fabric-api once
     const targetSlug =
       (depId.startsWith('fabric-') || depId.startsWith('fabric_')) && depId !== 'fabric-api'
         ? 'fabric-api'
         : KNOWN_MOD_ALIASES[depId] || depId
+
+    if (targetSlug === 'fabric-api') {
+      if (hasFabricApi) continue
+      hasFabricApi = true
+    }
 
     sendInAppLog(`[AstrixMC Dependencies] Missing dependency detected: '${depId}' (required by '${requiringMod}')`)
     try {

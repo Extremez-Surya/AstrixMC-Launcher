@@ -103,7 +103,7 @@ export async function installModpack(
     const total = filesToDownload.length
     onProgress?.(`Downloading mods: 0 / ${total}...`)
 
-    await runLimited(filesToDownload, 4, async (f) => {
+    await runLimited(filesToDownload, 8, async (f) => {
       const dest = join(inst.gameDirectory, f.path)
       if (!existsSync(dirname(dest))) mkdirSync(dirname(dest), { recursive: true })
       try {
