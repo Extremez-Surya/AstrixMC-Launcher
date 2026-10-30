@@ -140,6 +140,7 @@ export default function InstancesPage() {
 
   const confirmDelete = async () => {
     if (!instanceToDelete) return
+    const wasLast = instances.length <= 1
     try {
       await deleteInstance(instanceToDelete.id)
       playSound('success')
@@ -147,6 +148,9 @@ export default function InstancesPage() {
         type: 'success',
         message: `Deleted "${instanceToDelete.name}" successfully.`
       })
+      if (wasLast) {
+        navigate('/')
+      }
     } catch {
       playSound('error')
       setActiveNotification({

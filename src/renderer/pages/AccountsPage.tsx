@@ -79,6 +79,7 @@ export default function AccountsPage() {
 
   const confirmRemove = async () => {
     if (!accountToRemove) return
+    const wasLast = accounts.length <= 1
     try {
       await removeAccount(accountToRemove.id)
       playSound('success')
@@ -86,6 +87,9 @@ export default function AccountsPage() {
         type: 'success',
         message: `Removed account "${accountToRemove.username}".`
       })
+      if (wasLast) {
+        navigate('/')
+      }
     } catch {
       playSound('error')
       setNotification({

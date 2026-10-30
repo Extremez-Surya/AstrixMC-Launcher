@@ -88,15 +88,6 @@ function MainLayout({
     }
   }
 
-  // If no account is logged in, show split Login Screen
-  if (!activeAccount) {
-    return (
-      <div className="flex min-h-0 flex-1">
-        <LoginView />
-      </div>
-    )
-  }
-
   return (
     <div className="relative flex min-h-0 flex-1 flex-row overflow-hidden">
       {/* Left Vertical Floating Capsule Dock */}
@@ -138,7 +129,7 @@ export default function App() {
   return (
     <HashRouter>
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#07080C] text-[var(--astrix-text-primary)] select-none font-sans transition-colors duration-300">
-        {activeAccount && <GlobalAppBackground />}
+        <GlobalAppBackground />
         <TitleBar
           onOpenLogs={() => setIsLogsOpen(true)}
           onOpenSearch={() => setIsSearchOpen(true)}

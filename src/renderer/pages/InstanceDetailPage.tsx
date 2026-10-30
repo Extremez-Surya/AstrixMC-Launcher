@@ -554,7 +554,7 @@ export default function InstanceDetailPage() {
                           setIsHeaderMenuOpen(false)
                           if (confirm(`Are you sure you want to delete "${instance.name}"?`)) {
                             deleteInstance(instance.id)
-                            navigate('/instances')
+                            navigate('/')
                           }
                         }}
                         className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition-colors"

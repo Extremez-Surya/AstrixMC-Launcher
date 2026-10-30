@@ -20,10 +20,11 @@ import {
   HiCog6Tooth,
   HiSparkles,
   HiDocumentText,
-  HiPaintBrush
+  HiPaintBrush,
+  HiUser
 } from 'react-icons/hi2'
 import { FaShirt, FaDiscord } from 'react-icons/fa6'
-import LoginView from '../components/auth/LoginView'
+import AddAccountModal from '../components/onboarding/AddAccountModal'
 import CreateInstanceModal from '../components/instances/CreateInstanceModal'
 import { MinecraftSkinViewer3D } from '../components/skins/MinecraftSkinViewer3D'
 import { useAuth } from '../hooks/useAuth'
@@ -40,6 +41,7 @@ export default function HomePage() {
   const { launchGame, stopGame, isPlaying, isLaunching, progress } = useLaunch()
 
   const [isNewInstanceModalOpen, setIsNewInstanceModalOpen] = useState(false)
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   const [isFullbright, setIsFullbright] = useState(false)
   const [isContentsDrawerOpen, setIsContentsDrawerOpen] = useState(false)
@@ -69,9 +71,15 @@ export default function HomePage() {
     }
   }, [currentInstance?.id])
 
-  if (!activeAccount) return <LoginView />
-
   const handlePlay = (serverAddress?: string) => {
+    if (!currentInstance) {
+      return
+    }
+    if (!activeAccount) {
+      playSound('click')
+      setIsAddAccountModalOpen(true)
+      return
+    }
     playSound('launch')
     if (isPlaying) {
       if (serverAddress && currentInstance) {
@@ -99,7 +107,7 @@ export default function HomePage() {
     }
   }
 
-  const avatarUrl = getAccountAvatar(activeAccount, 36)
+  const avatarUrl = activeAccount ? getAccountAvatar(activeAccount, 36) : ''
   const loaderName = currentInstance?.modLoader
     ? `${currentInstance.modLoader.type.charAt(0).toUpperCase() + currentInstance.modLoader.type.slice(1)}`
     : 'Vanilla'
@@ -117,11 +125,13 @@ export default function HomePage() {
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="flex items-center gap-3 rounded-2xl border border-white/[0.12] bg-[#0A0E18]/85 px-4 py-2.5 backdrop-blur-2xl shadow-[0_12px_30px_rgba(0,0,0,0.6)] hover:border-amber-500/40 hover:bg-[#0D1220]/95 transition-all duration-200"
             >
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Play</span>
+              <span className={`text-xs font-bold uppercase tracking-wider ${currentInstance ? 'text-amber-400' : 'text-zinc-500'}`}>
+                Play
+              </span>
               <div className="h-4 w-[1px] bg-white/10" />
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-white max-w-[200px] truncate">
-                  {currentInstance ? currentInstance.name : 'Create Profile'}
+                  {currentInstance ? currentInstance.name : 'No Profile Selected'}
                 </span>
                 <HiChevronDown
                   className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${
@@ -145,24 +155,30 @@ export default function HomePage() {
                     Select Profile
                   </div>
                   <div className="max-h-56 overflow-y-auto space-y-1">
-                    {instances.map((inst) => (
-                      <button
-                        key={inst.id}
-                        onClick={() => {
-                          setActiveInstance(inst)
-                          setIsProfileDropdownOpen(false)
-                          playSound('click')
-                        }}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors ${
-                          inst.id === currentInstance?.id
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                            : 'text-zinc-300 hover:bg-white/[0.06] hover:text-white'
-                        }`}
-                      >
-                        <div className="truncate font-medium">{inst.name}</div>
-                        <span className="text-[10px] text-zinc-500 ml-2 whitespace-nowrap">MC {inst.mcVersion}</span>
-                      </button>
-                    ))}
+                    {instances.length === 0 ? (
+                      <div className="py-3 px-2 text-center text-xs text-zinc-400">
+                        No profiles found
+                      </div>
+                    ) : (
+                      instances.map((inst) => (
+                        <button
+                          key={inst.id}
+                          onClick={() => {
+                            setActiveInstance(inst)
+                            setIsProfileDropdownOpen(false)
+                            playSound('click')
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors ${
+                            inst.id === currentInstance?.id
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              : 'text-zinc-300 hover:bg-white/[0.06] hover:text-white'
+                          }`}
+                        >
+                          <div className="truncate font-medium">{inst.name}</div>
+                          <span className="text-[10px] text-zinc-500 ml-2 whitespace-nowrap">MC {inst.mcVersion}</span>
+                        </button>
+                      ))
+                    )}
                   </div>
 
                   <div className="mt-2 border-t border-white/[0.08] pt-2">
@@ -206,39 +222,61 @@ export default function HomePage() {
           </a>
 
           {/* Account & Skins Pill (Rock Client Style Image 2) */}
-          <div className="flex items-center gap-3 rounded-2xl border border-white/[0.12] bg-[#0A0E18]/85 px-3.5 py-2 backdrop-blur-2xl shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
-            <div className="relative h-8 w-8 rounded-xl overflow-hidden ring-1 ring-white/10">
-              <img
-                src={avatarUrl}
-                alt={activeAccount.username}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
-              />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white tracking-wide">{activeAccount.username}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399]" />
+          {activeAccount ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-white/[0.12] bg-[#0A0E18]/85 px-3.5 py-2 backdrop-blur-2xl shadow-[0_12px_30px_rgba(0,0,0,0.6)]">
+              <div className="relative h-8 w-8 rounded-xl overflow-hidden ring-1 ring-white/10">
+                <img
+                  src={avatarUrl}
+                  alt={activeAccount.username}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
               </div>
-              <span className="text-[10px] text-zinc-400 font-medium capitalize">
-                {activeAccount.type === 'microsoft' ? 'Microsoft Account' : 'Offline account'}
-              </span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white tracking-wide">{activeAccount.username}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399]" />
+                </div>
+                <span className="text-[10px] text-zinc-400 font-medium capitalize">
+                  {activeAccount.type === 'microsoft' ? 'Microsoft Account' : 'Offline account'}
+                </span>
+              </div>
+
+              <div className="h-4 w-[1px] bg-white/10 ml-1" />
+
+              {/* Skins Button Shortcut */}
+              <button
+                onClick={() => navigate('/skins')}
+                title="Skin Wardrobe & Capes"
+                className="flex items-center gap-1.5 rounded-xl bg-white/[0.06] hover:bg-amber-500/15 hover:text-amber-400 px-2.5 py-1 text-xs font-bold text-zinc-300 transition-colors"
+              >
+                <FaShirt className="h-3 w-3" />
+                <span>Skins</span>
+              </button>
             </div>
-
-            <div className="h-4 w-[1px] bg-white/10 ml-1" />
-
-            {/* Skins Button Shortcut */}
+          ) : (
             <button
-              onClick={() => navigate('/skins')}
-              title="Skin Wardrobe & Capes"
-              className="flex items-center gap-1.5 rounded-xl bg-white/[0.06] hover:bg-amber-500/15 hover:text-amber-400 px-2.5 py-1 text-xs font-bold text-zinc-300 transition-colors"
+              type="button"
+              onClick={() => {
+                playSound('click')
+                setIsAddAccountModalOpen(true)
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-amber-500/40 bg-[#0A0E18]/85 hover:bg-[#0E1424] px-3.5 py-2 backdrop-blur-2xl shadow-[0_12px_30px_rgba(245,158,11,0.25)] hover:border-amber-400 transition-all group"
             >
-              <FaShirt className="h-3 w-3" />
-              <span>Skins</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:scale-105 transition-transform">
+                <HiUser className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white tracking-wide group-hover:text-amber-300 transition-colors">Sign In</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                </div>
+                <span className="text-[10px] text-zinc-400 font-medium">Add Minecraft Account</span>
+              </div>
             </button>
-          </div>
+          )}
         </div>
       </header>
 
@@ -252,8 +290,14 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-1 flex items-center gap-2 rounded-full border border-white/[0.12] bg-[#0A0E18]/85 px-4 py-1 backdrop-blur-xl shadow-lg ring-1 ring-black/40"
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399]" />
-            <span className="text-xs font-black text-white tracking-wide">{activeAccount.username}</span>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                activeAccount ? 'bg-emerald-400 shadow-[0_0_8px_#34D399]' : 'bg-zinc-500'
+              }`}
+            />
+            <span className="text-xs font-black text-white tracking-wide">
+              {activeAccount?.username || 'Guest Player'}
+            </span>
           </motion.div>
 
           {/* 3D Skin Canvas */}
@@ -263,7 +307,8 @@ export default function HomePage() {
             style={{ transform: `scale(${skinZoom})` }}
           >
             <MinecraftSkinViewer3D
-              playerName={activeAccount.username}
+              playerName={activeAccount?.skinPlayerName || activeAccount?.username || 'Steve'}
+              skinUrl={activeAccount?.skinUrl}
               width={300}
               height={410}
               defaultAnimation={skinAnimation}
@@ -329,14 +374,20 @@ export default function HomePage() {
           <div className="flex flex-col rounded-3xl border border-white/[0.12] bg-[#0A0E18]/85 p-5 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[320px]">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">SELECTED PROFILE</span>
             <h2 className="mt-1 text-2xl font-black text-white tracking-tight truncate">
-              {currentInstance?.name || 'Astrix 26.3'}
+              {currentInstance ? currentInstance.name : 'No Profile Selected'}
             </h2>
             <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-zinc-300">
-              <span>{currentInstance?.mcVersion || '26.3'}</span>
-              <span className="text-zinc-500">·</span>
-              <span className="text-amber-400">{loaderName}</span>
-              <span className="text-zinc-500">·</span>
-              <span>{currentInstance?.memoryMax || 3} GB RAM</span>
+              {currentInstance ? (
+                <>
+                  <span>{currentInstance.mcVersion}</span>
+                  <span className="text-zinc-500">·</span>
+                  <span className="text-amber-400">{loaderName}</span>
+                  <span className="text-zinc-500">·</span>
+                  <span>{currentInstance.memoryMax || 3} GB RAM</span>
+                </>
+              ) : (
+                <span className="text-zinc-400 font-normal">No instance created</span>
+              )}
             </div>
           </div>
 
@@ -375,52 +426,79 @@ export default function HomePage() {
         {/* Bottom Center: Golden Hero Launch Capsule (Image 2 Rock Client) */}
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-2 rounded-3xl border border-white/[0.15] bg-[#0A0E18]/90 p-2 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85)] ring-1 ring-black/40">
-            <button
-              onClick={() => handlePlay()}
-              disabled={isLaunching}
-              className={`relative flex items-center justify-center gap-3 rounded-2xl px-12 md:px-14 py-3.5 text-base md:text-lg font-black tracking-wide transition-all duration-300 ${
-                (progress?.stage as string) === 'stopping'
-                  ? 'bg-gradient-to-r from-rose-700 to-amber-600 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] cursor-wait'
-                  : isPlaying
-                  ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] hover:brightness-110'
-                  : isLaunching
-                  ? 'bg-amber-500/50 text-black/70 cursor-wait'
-                  : 'bg-gradient-to-r from-[#F59E0B] via-[#EAB308] to-[#D97706] text-black shadow-[0_0_35px_rgba(245,158,11,0.45)] hover:shadow-[0_0_50px_rgba(245,158,11,0.65)] hover:scale-[1.02] active:scale-[0.98]'
-              }`}
-            >
-              {(progress?.stage as string) === 'stopping' ? (
-                <>
-                  <HiArrowPath className="h-6 w-6 animate-spin" />
-                  <span>Stopping...</span>
-                </>
-              ) : isPlaying ? (
-                <>
-                  <HiStop className="h-6 w-6" />
-                  <span>Stop Game</span>
-                </>
-              ) : isLaunching ? (
-                <>
-                  <HiArrowPath className="h-6 w-6 animate-spin" />
-                  <span>Launching...</span>
-                </>
-              ) : (
-                <>
-                  <HiPlay className="h-6 w-6 fill-current" />
-                  <span>Play</span>
-                </>
-              )}
-            </button>
+            {!currentInstance ? (
+              <button
+                type="button"
+                disabled
+                title="No profile selected. Create or select a profile first."
+                className="relative flex items-center justify-center gap-3 rounded-2xl px-12 md:px-14 py-3.5 text-base md:text-lg font-black tracking-wide bg-[#151922]/90 text-zinc-500 border border-white/10 cursor-not-allowed select-none shadow-none"
+              >
+                <HiPlay className="h-6 w-6 fill-current opacity-30" />
+                <span>No Profile</span>
+              </button>
+            ) : !activeAccount ? (
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click')
+                  setIsAddAccountModalOpen(true)
+                }}
+                className="relative flex items-center justify-center gap-3 rounded-2xl px-12 md:px-14 py-3.5 text-base md:text-lg font-black tracking-wide bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-[0_0_35px_rgba(245,158,11,0.45)] hover:shadow-[0_0_50px_rgba(245,158,11,0.65)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <HiUser className="h-6 w-6" />
+                <span>Sign In to Play</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handlePlay()}
+                disabled={isLaunching}
+                className={`relative flex items-center justify-center gap-3 rounded-2xl px-12 md:px-14 py-3.5 text-base md:text-lg font-black tracking-wide transition-all duration-300 ${
+                  (progress?.stage as string) === 'stopping'
+                    ? 'bg-gradient-to-r from-rose-700 to-amber-600 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] cursor-wait'
+                    : isPlaying
+                    ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white shadow-[0_0_30px_rgba(225,29,72,0.4)] hover:brightness-110'
+                    : isLaunching
+                    ? 'bg-amber-500/50 text-black/70 cursor-wait'
+                    : 'bg-gradient-to-r from-[#F59E0B] via-[#EAB308] to-[#D97706] text-black shadow-[0_0_35px_rgba(245,158,11,0.45)] hover:shadow-[0_0_50px_rgba(245,158,11,0.65)] hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {(progress?.stage as string) === 'stopping' ? (
+                  <>
+                    <HiArrowPath className="h-6 w-6 animate-spin" />
+                    <span>Stopping...</span>
+                  </>
+                ) : isPlaying ? (
+                  <>
+                    <HiStop className="h-6 w-6" />
+                    <span>Stop Game</span>
+                  </>
+                ) : isLaunching ? (
+                  <>
+                    <HiArrowPath className="h-6 w-6 animate-spin" />
+                    <span>Launching...</span>
+                  </>
+                ) : (
+                  <>
+                    <HiPlay className="h-6 w-6 fill-current" />
+                    <span>Play</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <button
               onClick={() => {
                 if (currentInstance?.id) {
                   navigate(`/instances/${currentInstance.id}`)
-                } else {
-                  navigate('/instances')
                 }
               }}
-              title="Profile Overview, Logs, Files & Share"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-zinc-300 hover:bg-white/[0.1] hover:text-white transition-all"
+              disabled={!currentInstance}
+              title={currentInstance ? "Profile Overview, Logs, Files & Share" : "No profile selected"}
+              className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all ${
+                currentInstance
+                  ? 'border-white/10 bg-white/[0.05] text-zinc-300 hover:bg-white/[0.1] hover:text-white'
+                  : 'border-white/5 bg-white/[0.02] text-zinc-600 cursor-not-allowed opacity-40'
+              }`}
             >
               <HiCog6Tooth className="h-5 w-5" />
             </button>
@@ -448,22 +526,26 @@ export default function HomePage() {
         </div>
 
         {/* Bottom Right: Profile Contents Drawer Toggle (Image 2 Rock Client) */}
-        <button
-          onClick={() => setIsContentsDrawerOpen(!isContentsDrawerOpen)}
-          className={`flex items-center gap-2 rounded-2xl border px-4 py-3 backdrop-blur-2xl shadow-[0_12px_30px_rgba(0,0,0,0.6)] transition-all ${
-            isContentsDrawerOpen
-              ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
-              : 'border-white/[0.12] bg-[#0A0E18]/85 text-zinc-300 hover:border-amber-500/40 hover:bg-[#0D1220]/90'
-          }`}
-        >
-          <HiSquares2X2 className="h-4 w-4 text-amber-400" />
-          <span className="text-xs font-bold">Profile contents</span>
-          {isContentsDrawerOpen ? (
-            <HiChevronUp className="h-4 w-4 text-amber-400" />
-          ) : (
-            <HiChevronDown className="h-4 w-4 text-amber-400" />
-          )}
-        </button>
+        {currentInstance ? (
+          <button
+            onClick={() => setIsContentsDrawerOpen(!isContentsDrawerOpen)}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-3 backdrop-blur-2xl shadow-[0_12px_30px_rgba(0,0,0,0.6)] transition-all ${
+              isContentsDrawerOpen
+                ? 'border-amber-500/50 bg-amber-500/20 text-amber-300'
+                : 'border-white/[0.12] bg-[#0A0E18]/85 text-zinc-300 hover:border-amber-500/40 hover:bg-[#0D1220]/90'
+            }`}
+          >
+            <HiSquares2X2 className="h-4 w-4 text-amber-400" />
+            <span className="text-xs font-bold">Profile contents</span>
+            {isContentsDrawerOpen ? (
+              <HiChevronUp className="h-4 w-4 text-amber-400" />
+            ) : (
+              <HiChevronDown className="h-4 w-4 text-amber-400" />
+            )}
+          </button>
+        ) : (
+          <div className="w-[160px]" />
+        )}
       </footer>
 
       {/* ── EXPANDABLE PROFILE CONTENTS DRAWER (ROCK CLIENT STYLE) ── */}
@@ -613,6 +695,14 @@ export default function HomePage() {
         onClose={() => setIsNewInstanceModalOpen(false)}
         onCreate={handleCreateNew}
       />
+
+      {/* ── ADD ACCOUNT MODAL ── */}
+      {isAddAccountModalOpen && (
+        <AddAccountModal
+          onComplete={() => setIsAddAccountModalOpen(false)}
+          onClose={() => setIsAddAccountModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

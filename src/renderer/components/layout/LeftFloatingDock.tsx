@@ -149,8 +149,10 @@ export default function LeftFloatingDock({ onNewInstance }: LeftFloatingDockProp
             <HiUserCircle className="h-7 w-7 text-zinc-400 group-hover:text-amber-400 transition-colors" />
           )}
 
-          {/* Online Green Indicator Dot */}
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0A0D15]" />
+          {/* Online Green Indicator Dot when logged in */}
+          {activeAccount && (
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0A0D15]" />
+          )}
         </NavLink>
       </div>
     </motion.nav>
