@@ -220,6 +220,13 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
     []
   )
 
+  // Synchronize animation with external defaultAnimation prop
+  useEffect(() => {
+    if (defaultAnimation) {
+      handleToggleAnimation(defaultAnimation === 'fly' ? 'walk' : defaultAnimation)
+    }
+  }, [defaultAnimation, handleToggleAnimation])
+
   // Reset Camera View
   const handleResetCamera = useCallback(() => {
     const viewer = viewerRef.current

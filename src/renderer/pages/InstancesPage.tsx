@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  HiPlay,
   HiPlus,
   HiMagnifyingGlass,
   HiXMark,
@@ -11,13 +12,20 @@ import {
   HiExclamationCircle,
   HiChevronUpDown,
   HiSquares2X2,
+  HiListBullet,
+  HiClock,
   HiTrash,
   HiPencilSquare,
   HiCheck,
   HiBolt,
   HiArrowRight,
   HiSparkles,
-  HiCpuChip
+  HiAdjustmentsHorizontal,
+  HiEllipsisHorizontal,
+  HiFolderOpen,
+  HiDocumentDuplicate,
+  HiBookmark,
+  HiChevronDown
 } from 'react-icons/hi2'
 import {
   FabricIcon,
@@ -26,7 +34,6 @@ import {
 } from '../components/common/GamingIcons'
 import CreateInstanceModal from '../components/instances/CreateInstanceModal'
 import ManageInstanceModal from '../components/instances/ManageInstanceModal'
-import InstanceCard from '../components/instances/InstanceCard'
 import { useInstances } from '../hooks/useInstances'
 import { useLaunch } from '../hooks/useLaunch'
 import type { GameInstance } from '../../shared/types/instance'
@@ -34,8 +41,9 @@ import { playSound } from '../utils/sound'
 import { cn } from '../lib/cn'
 import mcVillageImg from '../assets/mc_village_sunset.jpg'
 
-type SortOption = 'name-asc' | 'name-desc' | 'last-played' | 'version'
-type LoaderFilter = 'all' | 'fabric' | 'forge' | 'neoforge' | 'vanilla'
+type SortOption = 'recently-opened' | 'name-asc' | 'name-desc' | 'version'
+type ActiveTab = 'all' | 'pinned'
+type ViewMode = 'grid' | 'list'
 
 export default function InstancesPage() {
   const navigate = useNavigate()
@@ -61,16 +69,43 @@ export default function InstancesPage() {
   const [newProfileName, setNewProfileName] = useState('')
   const [renameError, setRenameError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedLoader, setSelectedLoader] = useState<LoaderFilter>('all')
-  const [sortBy, setSortBy] = useState<SortOption>('name-asc')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [sortBy, setSortBy] = useState<SortOption>('recently-opened')
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
+  const [openMenuInstanceId, setOpenMenuInstanceId] = useState<string | null>(null)
   const [activeNotification, setActiveNotification] = useState<{
     type: 'success' | 'error'
     message: string
   } | null>(null)
 
+  // Pinned instance IDs in localStorage
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('astrix_pinned_profiles') || '[]')
+    } catch {
+      return []
+    }
+  })
+
+  const togglePin = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    playSound('click')
+    setPinnedIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      try {
+        localStorage.setItem('astrix_pinned_profiles', JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+
   useEffect(() => {
-    if (activeNotification && !activeNotification.message.toLowerCase().includes('downloading') && !activeNotification.message.toLowerCase().includes('installing')) {
+    if (
+      activeNotification &&
+      !activeNotification.message.toLowerCase().includes('downloading') &&
+      !activeNotification.message.toLowerCase().includes('installing')
+    ) {
       const timer = setTimeout(() => {
         setActiveNotification(null)
       }, 5000)
@@ -78,11 +113,12 @@ export default function InstancesPage() {
     }
   }, [activeNotification])
 
-  // Modloader Distribution Counts
-  const fabricCount = useMemo(() => instances.filter((i) => i.modLoader?.type?.toLowerCase() === 'fabric').length, [instances])
-  const forgeCount = useMemo(() => instances.filter((i) => i.modLoader?.type?.toLowerCase() === 'forge').length, [instances])
-  const neoforgeCount = useMemo(() => instances.filter((i) => i.modLoader?.type?.toLowerCase() === 'neoforge').length, [instances])
-  const vanillaCount = useMemo(() => instances.filter((i) => !i.modLoader || i.modLoader?.type?.toLowerCase() === 'vanilla').length, [instances])
+  // Close card menus on outside click
+  useEffect(() => {
+    const handleGlobalClick = () => setOpenMenuInstanceId(null)
+    window.addEventListener('click', handleGlobalClick)
+    return () => window.removeEventListener('click', handleGlobalClick)
+  }, [])
 
   const handleCreateInstance = async (data: any) => {
     const newInst = await createInstance(data)
@@ -229,6 +265,9 @@ export default function InstancesPage() {
     }
   }
 
+  // Active / featured instance for the top Panorama Banner
+  const featuredInstance = activeInstance || instances[0]
+
   // Filter & Sort instances
   const processedInstances = useMemo(() => {
     let result = instances.filter((inst) => {
@@ -236,15 +275,8 @@ export default function InstancesPage() {
         inst.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         inst.mcVersion.toLowerCase().includes(searchQuery.toLowerCase())
 
-      const type = inst.modLoader?.type?.toLowerCase() || 'vanilla'
-      const matchesLoader =
-        selectedLoader === 'all'
-          ? true
-          : selectedLoader === 'vanilla'
-          ? !inst.modLoader || type === 'vanilla'
-          : type === selectedLoader
-
-      return matchesSearch && matchesLoader
+      const matchesTab = activeTab === 'all' ? true : pinnedIds.includes(inst.id)
+      return matchesSearch && matchesTab
     })
 
     result.sort((a, b) => {
@@ -257,7 +289,7 @@ export default function InstancesPage() {
       if (sortBy === 'version') {
         return b.mcVersion.localeCompare(a.mcVersion, undefined, { numeric: true })
       }
-      if (sortBy === 'last-played') {
+      if (sortBy === 'recently-opened') {
         const timeA = a.lastPlayed ? new Date(a.lastPlayed).getTime() : 0
         const timeB = b.lastPlayed ? new Date(b.lastPlayed).getTime() : 0
         return timeB - timeA
@@ -266,222 +298,158 @@ export default function InstancesPage() {
     })
 
     return result
-  }, [instances, searchQuery, selectedLoader, sortBy])
+  }, [instances, searchQuery, activeTab, pinnedIds, sortBy])
 
   const sortLabels: Record<SortOption, string> = {
-    'name-asc': '↑ Name (A-Z)',
-    'name-desc': '↓ Name (Z-A)',
-    'last-played': '🕒 Last Played',
-    'version': '⚡ MC Version'
+    'recently-opened': 'Recently opened',
+    'name-asc': 'Name (A-Z)',
+    'name-desc': 'Name (Z-A)',
+    'version': 'Version'
+  }
+
+  // Item icon graphics generator for cards
+  const renderInstanceItemGraphic = (instance: GameInstance, size = 'md') => {
+    const isFabric = instance.modLoader?.type?.toLowerCase() === 'fabric'
+    const isForge = instance.modLoader?.type?.toLowerCase() === 'forge'
+    const isNeoForge = instance.modLoader?.type?.toLowerCase() === 'neoforge'
+
+    if (isFabric) {
+      return (
+        <div className={cn(
+          'flex items-center justify-center rounded-2xl bg-sky-950/40 border border-sky-500/20 text-sky-400 shadow-lg',
+          size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
+        )}>
+          <FabricIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+        </div>
+      )
+    }
+
+    if (isForge || isNeoForge) {
+      return (
+        <div className={cn(
+          'flex items-center justify-center rounded-2xl bg-amber-950/40 border border-amber-500/20 text-amber-400 shadow-lg',
+          size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
+        )}>
+          <ForgeIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+        </div>
+      )
+    }
+
+    return (
+      <div className={cn(
+        'flex items-center justify-center rounded-2xl bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 shadow-lg',
+        size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
+      )}>
+        <GrassBlockIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+      </div>
+    )
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 py-7 pb-32 bg-transparent min-h-full font-sans select-none">
-      {/* ── TOP HEADER WITH LIVE STATS BAR ── */}
+    <div className="mx-auto w-full max-w-7xl px-6 sm:px-10 py-7 pb-36 bg-transparent min-h-full font-sans select-none">
+      {/* ── TOP HEADER (TITLE: "Library" + "+ Create profile" BUTTON) ── */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        transition={{ duration: 0.25 }}
+        className="mb-6 flex items-center justify-between"
       >
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-display">
-              Your Profiles
-            </h1>
-            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-0.5 font-mono text-[11px] font-black uppercase text-emerald-400">
-              {instances.length} {instances.length === 1 ? 'Profile' : 'Profiles'}
-            </span>
-          </div>
-          <p className="text-xs text-slate-400">
-            Manage your client instances, switch modloaders, and launch with instant zero-lag optimization.
-          </p>
-        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-display">
+          Library
+        </h1>
 
-        {/* Quick summary stats bar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {activeInstance && (
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-[#0C101A]/90 px-3.5 py-2 shadow-inner backdrop-blur-xl">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10B981]" />
-              <span className="text-[11px] font-medium text-slate-400">Active:</span>
-              <span className="text-xs font-black text-emerald-300 font-display truncate max-w-[130px]">
-                {activeInstance.name}
-              </span>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          type="button"
+          onClick={() => {
+            playSound('click')
+            setIsModalOpen(true)
+          }}
+          className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2 text-xs sm:text-sm font-extrabold text-black shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+        >
+          <HiPlus className="h-4 w-4 stroke-[3]" />
+          <span>Create profile</span>
+        </motion.button>
+      </motion.div>
+
+      {/* ── HERO PANORAMA: SELECTED PROFILE BANNER ── */}
+      {featuredInstance && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="relative mb-7 overflow-hidden rounded-3xl border border-white/10 bg-[#0A0E18]/90 shadow-2xl backdrop-blur-2xl"
+        >
+          {/* Panoramic Minecraft landscape art */}
+          <div className="absolute inset-0 pointer-events-none">
+            <img
+              src={mcVillageImg}
+              alt="Minecraft World Panorama"
+              className="h-full w-full object-cover object-center opacity-30"
+            />
+            {/* Dark vignette & side gradients */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#070A12] via-[#070A12]/85 to-[#070A12]/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#070A12]/90 via-transparent to-transparent" />
+          </div>
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8">
+            {/* Left Content */}
+            <div className="flex flex-col gap-1 max-w-xl">
+              <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-amber-400">
+                <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_#F59E0B]" />
+                <span>SELECTED PROFILE</span>
+              </div>
+
+              <h2 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate font-display">
+                {featuredInstance.name}
+              </h2>
+
+              <p className="text-xs sm:text-sm font-medium text-zinc-400">
+                Minecraft {featuredInstance.mcVersion}
+                {featuredInstance.modLoader?.type && (
+                  <>
+                    {' · '}
+                    <span className="capitalize">{featuredInstance.modLoader.type}</span>
+                    {featuredInstance.modLoader.version && ` ${featuredInstance.modLoader.version}`}
+                  </>
+                )}
+              </p>
+
+              {/* Action Buttons Row */}
+              <div className="mt-4 sm:mt-5 flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => launchGame(featuredInstance.id)}
+                  disabled={isLaunching}
+                  className="flex items-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-black shadow-lg shadow-amber-500/25 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  <HiPlay className="h-4 w-4 fill-current stroke-current" />
+                  <span>Launch Game</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click')
+                    setManagingInstance(featuredInstance)
+                    setManageTab('mods')
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] hover:bg-white/[0.14] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm active:scale-95 transition-all"
+                >
+                  <HiAdjustmentsHorizontal className="h-4 w-4 text-zinc-300" />
+                  <span>Manage profile</span>
+                </button>
+              </div>
             </div>
-          )}
 
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-[#0C101A]/80 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur-xl shadow-inner">
-            <FabricIcon className="h-4 w-4 text-sky-400" />
-            <span className="text-slate-300 font-bold">{fabricCount}</span>
-            <span className="text-[10px] text-slate-500">Fabric</span>
+            {/* Right Large Squircle Item Badge */}
+            <div className="hidden sm:flex items-center justify-center h-28 w-28 rounded-3xl bg-[#092017]/90 border border-emerald-500/30 p-4 shadow-2xl backdrop-blur-md shrink-0">
+              {renderInstanceItemGraphic(featuredInstance, 'lg')}
+            </div>
           </div>
-
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-[#0C101A]/80 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur-xl shadow-inner">
-            <ForgeIcon className="h-4 w-4 text-amber-400" />
-            <span className="text-slate-300 font-bold">{forgeCount + neoforgeCount}</span>
-            <span className="text-[10px] text-slate-500">Forge</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/10 bg-[#0C101A]/80 px-3 py-2 text-xs font-medium text-slate-400 backdrop-blur-xl shadow-inner">
-            <GrassBlockIcon className="h-4 w-4 text-emerald-400" />
-            <span className="text-slate-300 font-bold">{vanillaCount}</span>
-            <span className="text-[10px] text-slate-500">Vanilla</span>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ── TOOLBAR: SEARCH + SORT + MODPACKS + CREATE ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.05 }}
-        className="mb-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
-      >
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-xl">
-          <HiMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search profiles by name or MC version..."
-            className="w-full rounded-2xl border border-white/10 bg-[#0C101A]/90 pl-10 pr-9 py-2.5 text-xs text-white placeholder-slate-500 focus:border-emerald-500/60 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all backdrop-blur-xl shadow-inner"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-            >
-              <HiXMark size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Action Controls: Sort + Browse Modpacks + Create Profile */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-          {/* Sort Selector */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                playSound('click')
-                setIsSortDropdownOpen((prev) => !prev)
-              }}
-              className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0C101A]/90 px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:border-white/20 hover:text-white transition-all backdrop-blur-xl shadow-sm"
-            >
-              <span>{sortLabels[sortBy]}</span>
-              <HiChevronUpDown size={15} className="text-slate-400" />
-            </button>
-
-            <AnimatePresence>
-              {isSortDropdownOpen && (
-                <>
-                  <div
-                    onClick={() => setIsSortDropdownOpen(false)}
-                    className="fixed inset-0 z-40"
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 6 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-2xl border border-white/12 bg-[#0E1320]/95 p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-left"
-                  >
-                    {(Object.keys(sortLabels) as SortOption[]).map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          playSound('click')
-                          setSortBy(opt)
-                          setIsSortDropdownOpen(false)
-                        }}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                          sortBy === opt
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <span>{sortLabels[opt]}</span>
-                        {sortBy === opt && <span className="text-emerald-400 text-xs">✓</span>}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Browse Modpacks Button */}
-          <button
-            type="button"
-            onClick={() => {
-              playSound('click')
-              navigate('/mods')
-            }}
-            className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0C101A]/90 px-4 py-2.5 text-xs font-bold text-slate-200 hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-white transition-all backdrop-blur-xl shadow-sm whitespace-nowrap active:scale-95"
-            title="Explore Modrinth & CurseForge modpacks"
-          >
-            <HiPuzzlePiece size={16} className="text-purple-400" />
-            <span>Browse Modpacks</span>
-          </button>
-
-          {/* Import Zip Button */}
-          <button
-            type="button"
-            onClick={handleImport}
-            className="hidden lg:flex items-center gap-1.5 rounded-2xl border border-white/10 bg-[#0C101A]/90 px-3 py-2.5 text-xs font-bold text-slate-300 hover:border-white/20 hover:text-white transition-all backdrop-blur-xl shadow-sm active:scale-95"
-            title="Import an existing instance from .zip"
-          >
-            <HiArrowDownTray size={15} className="text-slate-400" />
-            <span>Import</span>
-          </button>
-
-          {/* + Create Profile Primary Button */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="button"
-            onClick={() => {
-              playSound('click')
-              setIsModalOpen(true)
-            }}
-            className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-lg shadow-emerald-500/25 hover:brightness-110 active:scale-95 transition-all whitespace-nowrap"
-          >
-            <HiPlus className="h-4 w-4 stroke-[3]" />
-            <span>Create Profile</span>
-          </motion.button>
-        </div>
-      </motion.div>
-
-      {/* ── CATEGORY FILTER TABS WITH LIVE COUNTS ── */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { id: 'all', label: `All Profiles (${instances.length})` },
-          { id: 'fabric', label: `Fabric (${fabricCount})` },
-          { id: 'forge', label: `Forge (${forgeCount})` },
-          { id: 'neoforge', label: `NeoForge (${neoforgeCount})` },
-          { id: 'vanilla', label: `Vanilla (${vanillaCount})` }
-        ].map((cat) => {
-          const isActive = selectedLoader === cat.id
-          return (
-            <button
-              key={cat.id}
-              onClick={() => {
-                playSound('click')
-                setSelectedLoader(cat.id as LoaderFilter)
-              }}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap ${
-                isActive
-                  ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/25'
-                  : 'border border-white/10 bg-[#0A0D15]/80 text-slate-400 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {cat.label}
-            </button>
-          )
-        })}
-      </div>
+        </motion.div>
+      )}
 
       {/* ── NOTIFICATIONS ── */}
       <AnimatePresence>
@@ -526,11 +494,11 @@ export default function InstancesPage() {
           >
             <div className="flex items-center justify-between text-xs mb-2 font-mono">
               <span className="font-semibold text-white">{progress.message}</span>
-              <span className="font-bold text-emerald-400">{progress.progress}%</span>
+              <span className="font-bold text-amber-400">{progress.progress}%</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-black/40 border border-white/5">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 shadow-[0_0_12px_rgba(251,191,36,0.5)]"
                 style={{ width: `${progress.progress}%` }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               />
@@ -547,18 +515,182 @@ export default function InstancesPage() {
         </div>
       )}
 
-      {/* ── PROFILES GRID ── */}
+      {/* ── TABS & FILTER BAR (ALL PROFILES / PINNED + SEARCH + SORT + VIEW SWITCHER) ── */}
+      <div className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-3">
+        {/* Left Tabs: All Profiles (count) | Pinned (count) */}
+        <div className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click')
+              setActiveTab('all')
+            }}
+            className={cn(
+              'relative pb-3 text-xs sm:text-sm font-extrabold transition-colors flex items-center gap-2',
+              activeTab === 'all' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+            )}
+          >
+            <span>All profiles</span>
+            <span className="text-[11px] font-mono text-zinc-500">{instances.length}</span>
+            {activeTab === 'all' && (
+              <motion.div
+                layoutId="activeTabUnderline"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"
+              />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click')
+              setActiveTab('pinned')
+            }}
+            className={cn(
+              'relative pb-3 text-xs sm:text-sm font-extrabold transition-colors flex items-center gap-1.5',
+              activeTab === 'pinned' ? 'text-white' : 'text-zinc-400 hover:text-zinc-200'
+            )}
+          >
+            <HiBookmark className="h-3.5 w-3.5 text-zinc-400" />
+            <span>Pinned</span>
+            <span className="text-[11px] font-mono text-zinc-500">{pinnedIds.length}</span>
+            {activeTab === 'pinned' && (
+              <motion.div
+                layoutId="activeTabUnderline"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"
+              />
+            )}
+          </button>
+        </div>
+
+        {/* Right Controls: Search + Sort Dropdown + View Modes */}
+        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+          {/* Search Input */}
+          <div className="relative flex-1 sm:w-56">
+            <HiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search profiles"
+              className="w-full rounded-xl border border-white/10 bg-[#0C111D]/80 pl-9 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:border-amber-400/50 focus:outline-none focus:ring-1 focus:ring-amber-400/30 transition-all shadow-inner"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              >
+                <HiXMark size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Sort By Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                playSound('click')
+                setIsSortDropdownOpen((prev) => !prev)
+              }}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#0C111D]/80 px-3 py-2 text-xs font-semibold text-zinc-300 hover:border-white/20 hover:text-white transition-all shadow-sm whitespace-nowrap"
+            >
+              <span className="text-zinc-500">Sort by</span>
+              <span className="font-bold text-white">{sortLabels[sortBy]}</span>
+              <HiChevronDown size={14} className="text-zinc-400" />
+            </button>
+
+            <AnimatePresence>
+              {isSortDropdownOpen && (
+                <>
+                  <div
+                    onClick={() => setIsSortDropdownOpen(false)}
+                    className="fixed inset-0 z-40"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-2xl border border-white/12 bg-[#0E1320]/95 p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-left"
+                  >
+                    {(Object.keys(sortLabels) as SortOption[]).map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => {
+                          playSound('click')
+                          setSortBy(opt)
+                          setIsSortDropdownOpen(false)
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+                          sortBy === opt
+                            ? 'bg-amber-400/20 text-amber-300'
+                            : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <span>{sortLabels[opt]}</span>
+                        {sortBy === opt && <span className="text-amber-400 text-xs">✓</span>}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* View Mode Switcher */}
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#0C111D]/80 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click')
+                setViewMode('list')
+              }}
+              title="List View"
+              className={cn(
+                'rounded-lg p-1.5 transition-colors',
+                viewMode === 'list'
+                  ? 'bg-amber-400/20 text-amber-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              )}
+            >
+              <HiListBullet size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click')
+                setViewMode('grid')
+              }}
+              title="Grid View"
+              className={cn(
+                'rounded-lg p-1.5 transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-amber-400/20 text-amber-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              )}
+            >
+              <HiSquares2X2 size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── PROFILES CONTENT (GRID OR LIST) ── */}
       {instances.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/15 bg-[#0B0E16]/80 backdrop-blur-xl px-8 py-20 text-center shadow-2xl"
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/15 text-emerald-400 mb-4 shadow-lg shadow-emerald-500/20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/15 text-amber-400 mb-4 shadow-lg shadow-amber-500/20">
             <HiSquares2X2 className="h-8 w-8" />
           </div>
           <h2 className="text-xl font-black text-white font-display">No Profiles Installed</h2>
-          <p className="mt-1 max-w-sm text-xs text-slate-400 leading-relaxed">
+          <p className="mt-1 max-w-sm text-xs text-zinc-400 leading-relaxed">
             Create your first Minecraft profile to install Fabric, Forge, or Vanilla with zero-lag optimization.
           </p>
           <motion.button
@@ -569,82 +701,305 @@ export default function InstancesPage() {
               playSound('click')
               setIsModalOpen(true)
             }}
-            className="mt-6 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 px-6 py-3 text-xs font-black uppercase tracking-wider text-slate-950 shadow-xl shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition-all"
+            className="mt-6 flex items-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 px-6 py-3 text-xs font-black uppercase tracking-wider text-black shadow-xl shadow-amber-500/30 active:scale-95 transition-all"
           >
             <HiPlus className="h-4 w-4 stroke-[3]" />
-            <span>Create Your First Profile</span>
+            <span>Create Profile</span>
           </motion.button>
         </motion.div>
       ) : processedInstances.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-white/10 bg-[#0B0E16]/70 p-12 text-center backdrop-blur-xl">
-          <p className="text-sm font-semibold text-slate-300">No profiles match &ldquo;{searchQuery}&rdquo;</p>
+          <p className="text-sm font-semibold text-zinc-300">
+            {activeTab === 'pinned'
+              ? 'No pinned profiles yet. Pin your favorite profiles by clicking the bookmark icon.'
+              : `No profiles match "${searchQuery}"`}
+          </p>
           <button
             onClick={() => {
               setSearchQuery('')
-              setSelectedLoader('all')
+              setActiveTab('all')
             }}
-            className="mt-3 text-xs font-bold text-emerald-400 hover:underline"
+            className="mt-3 text-xs font-bold text-amber-400 hover:underline"
           >
-            Clear Filters
+            Show All Profiles
           </button>
         </div>
+      ) : viewMode === 'grid' ? (
+        /* ── SQUIRCLE CARD GRID (MATCHING ROCK CLIENT IMAGE 2) ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {processedInstances.map((instance) => {
+            const isSelected = activeInstance?.id === instance.id
+            const isPinned = pinnedIds.includes(instance.id)
+
+            return (
+              <motion.div
+                key={instance.id}
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => {
+                  playSound('click')
+                  setActiveInstance(instance)
+                }}
+                className={cn(
+                  'group relative flex flex-col justify-between rounded-2xl border p-4 shadow-xl transition-all min-h-[230px] cursor-pointer backdrop-blur-xl',
+                  isSelected
+                    ? 'border-amber-400/50 bg-[#0E1320]/90 shadow-[0_12px_35px_rgba(245,158,11,0.12)]'
+                    : 'border-white/10 bg-[#0A0D15]/80 hover:border-white/25 hover:bg-[#0E1320]/95'
+                )}
+              >
+                {/* Top Row: "✓ Selected" Tag or Pin */}
+                <div className="flex items-center justify-between w-full h-5">
+                  {isSelected ? (
+                    <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-400">
+                      <HiCheck className="h-3.5 w-3.5 stroke-[3]" />
+                      <span>Selected</span>
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+
+                  {/* Bookmark Pin Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => togglePin(instance.id, e)}
+                    title={isPinned ? 'Unpin profile' : 'Pin profile'}
+                    className={cn(
+                      'rounded-md p-1 transition-all',
+                      isPinned
+                        ? 'text-amber-400 opacity-100'
+                        : 'text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-white'
+                    )}
+                  >
+                    <HiBookmark size={14} className={isPinned ? 'fill-current' : ''} />
+                  </button>
+                </div>
+
+                {/* Center Item Graphic */}
+                <div className="my-3 flex items-center justify-center">
+                  <div className="transition-transform duration-300 group-hover:scale-110">
+                    {renderInstanceItemGraphic(instance, 'md')}
+                  </div>
+                </div>
+
+                {/* Bottom Section: Name + Version/Loader Badges + Action Row */}
+                <div className="flex flex-col gap-2 mt-auto">
+                  <div className="font-display">
+                    <h3 className="text-sm font-black text-white truncate" title={instance.name}>
+                      {instance.name}
+                    </h3>
+                  </div>
+
+                  {/* Badges Row */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-400">
+                      {instance.mcVersion}
+                    </span>
+                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-400 capitalize">
+                      {instance.modLoader?.type || 'Vanilla'}{' '}
+                      {instance.modLoader?.version ? instance.modLoader.version.split('.').slice(0, 2).join('.') : ''}
+                    </span>
+                  </div>
+
+                  {/* Action Bar: Launch Game + Settings Gear + Ellipsis Menu */}
+                  <div
+                    className="flex items-center gap-1.5 pt-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      disabled={isLaunching}
+                      onClick={() => launchGame(instance.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400 text-amber-300 hover:text-black py-1.5 px-3 text-xs font-black transition-all active:scale-95 disabled:opacity-40"
+                    >
+                      <HiPlay className="h-3.5 w-3.5 fill-current" />
+                      <span>Launch Game</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click')
+                        setManagingInstance(instance)
+                        setManageTab('mods')
+                      }}
+                      title="Manage Profile Settings"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.12] p-2 text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <HiAdjustmentsHorizontal size={15} />
+                    </button>
+
+                    {/* Ellipsis Menu */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          playSound('click')
+                          setOpenMenuInstanceId(openMenuInstanceId === instance.id ? null : instance.id)
+                        }}
+                        title="More options"
+                        className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.12] p-2 text-zinc-400 hover:text-white transition-colors"
+                      >
+                        <HiEllipsisHorizontal size={15} />
+                      </button>
+
+                      <AnimatePresence>
+                        {openMenuInstanceId === instance.id && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 4 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 bottom-full mb-2 w-48 overflow-hidden rounded-2xl border border-white/12 bg-[#0E1320]/95 p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-left"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                playSound('click')
+                                openInstanceFolder(instance.id)
+                                setOpenMenuInstanceId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                            >
+                              <HiFolderOpen size={14} className="text-zinc-400" />
+                              <span>Open Game Folder</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleFpsBoost(instance.id)
+                                setOpenMenuInstanceId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-400/10 transition-colors"
+                            >
+                              <HiBolt size={14} className="text-amber-400" />
+                              <span>1-Click FPS Boost</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openRenameModal(instance)
+                                setOpenMenuInstanceId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                            >
+                              <HiPencilSquare size={14} className="text-zinc-400" />
+                              <span>Rename Profile</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                playSound('click')
+                                duplicateInstance(instance.id)
+                                setOpenMenuInstanceId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                            >
+                              <HiDocumentDuplicate size={14} className="text-zinc-400" />
+                              <span>Duplicate</span>
+                            </button>
+
+                            <div className="my-1 h-[1px] bg-white/10" />
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleDelete(instance.id)
+                                setOpenMenuInstanceId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/15 transition-colors"
+                            >
+                              <HiTrash size={14} />
+                              <span>Delete Profile</span>
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {processedInstances.map((instance) => (
-            <InstanceCard
-              key={instance.id}
-              instance={instance}
-              isDefault={activeInstance?.id === instance.id}
-              isLaunching={isLaunching}
-              onLaunch={(id) => launchGame(id)}
-              onOpenFolder={(id, sub) => openInstanceFolder(id, sub)}
-              onDelete={handleDelete}
-              onFpsBoost={handleFpsBoost}
-              onSetDefault={(inst) => {
-                playSound('success')
-                setActiveInstance(inst)
-              }}
-              onDuplicate={(id) => duplicateInstance(id)}
-              onRename={openRenameModal}
-              onManage={(inst, tab) => {
-                setManagingInstance(inst)
-                if (tab) setManageTab(tab)
-              }}
-            />
-          ))}
+        /* ── LIST VIEW MODE ── */
+        <div className="flex flex-col gap-2">
+          {processedInstances.map((instance) => {
+            const isSelected = activeInstance?.id === instance.id
+            const isPinned = pinnedIds.includes(instance.id)
 
-          {/* ── "+ CREATE PROFILE" CARD ── */}
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            onClick={() => {
-              playSound('click')
-              setIsModalOpen(true)
-            }}
-            className="group relative flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-white/15 bg-[#090C14]/70 hover:border-emerald-500/50 hover:bg-[#0C101A]/90 hover:shadow-[0_16px_40px_rgba(0,0,0,0.8),0_0_25px_rgba(16,185,129,0.15)] backdrop-blur-xl p-8 text-center transition-all duration-300 min-h-[190px] overflow-hidden"
-          >
-            {/* Subtle Minecraft landscape glow on hover */}
-            <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
-              <img
-                src={mcVillageImg}
-                alt="Create Profile Backdrop"
-                className="h-full w-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#090C14] via-[#090C14]/80 to-transparent" />
-            </div>
+            return (
+              <div
+                key={instance.id}
+                onClick={() => {
+                  playSound('click')
+                  setActiveInstance(instance)
+                }}
+                className={cn(
+                  'flex items-center justify-between rounded-2xl border px-4 py-3 transition-all cursor-pointer backdrop-blur-xl',
+                  isSelected
+                    ? 'border-amber-400/50 bg-[#0E1320]/90'
+                    : 'border-white/10 bg-[#0A0D15]/80 hover:border-white/20 hover:bg-[#0E1320]/90'
+                )}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {renderInstanceItemGraphic(instance, 'sm')}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-black text-white truncate font-display">
+                        {instance.name}
+                      </h3>
+                      {isSelected && (
+                        <span className="text-[10px] font-bold text-amber-400">✓ Selected</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-zinc-400">
+                      <span>MC {instance.mcVersion}</span>
+                      <span>·</span>
+                      <span className="capitalize">{instance.modLoader?.type || 'Vanilla'}</span>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-slate-400 group-hover:border-emerald-400/50 group-hover:bg-emerald-500/20 group-hover:text-emerald-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
-                <HiPlus size={26} />
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => togglePin(instance.id, e)}
+                    className="p-1.5 text-zinc-500 hover:text-white"
+                  >
+                    <HiBookmark size={15} className={isPinned ? 'fill-amber-400 text-amber-400' : ''} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click')
+                      setManagingInstance(instance)
+                    }}
+                    className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-zinc-400 hover:text-white"
+                  >
+                    <HiAdjustmentsHorizontal size={15} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => launchGame(instance.id)}
+                    className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold px-4 py-2 text-xs"
+                  >
+                    <HiPlay size={14} className="fill-current" />
+                    <span>Launch</span>
+                  </button>
+                </div>
               </div>
-              <span className="mt-3.5 text-sm font-black font-display uppercase tracking-widest text-slate-300 group-hover:text-white transition-colors">
-                Create Profile
-              </span>
-              <span className="mt-1 text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
-                Deploy Fabric, Forge, or Vanilla with 1-click optimization
-              </span>
-            </div>
-          </motion.div>
+            )
+          })}
         </div>
       )}
 
@@ -657,12 +1012,12 @@ export default function InstancesPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 14 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-emerald-500/30 bg-[#0C101B]/98 p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.95)] backdrop-blur-3xl ring-1 ring-emerald-500/20"
+              className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-amber-500/30 bg-[#0C101B]/98 p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.95)] backdrop-blur-3xl ring-1 ring-amber-500/20"
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
                     <HiPencilSquare size={22} />
                   </div>
                   <div>
@@ -670,11 +1025,11 @@ export default function InstancesPage() {
                       <h3 className="text-lg font-black text-white font-display tracking-tight">
                         Rename Profile
                       </h3>
-                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
                         {instanceToRename.modLoader?.type?.toUpperCase() || 'VANILLA'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-zinc-400">
                       Update your local instance profile name &amp; label.
                     </p>
                   </div>
@@ -686,7 +1041,7 @@ export default function InstancesPage() {
                     playSound('click')
                     setInstanceToRename(null)
                   }}
-                  className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white transition-all"
+                  className="rounded-xl p-2 text-zinc-400 hover:bg-white/10 hover:text-white transition-all"
                 >
                   <HiXMark size={20} />
                 </button>
@@ -697,32 +1052,23 @@ export default function InstancesPage() {
                 <div className="flex items-center justify-between gap-3">
                   {/* Before */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-slate-400 shrink-0">
-                      {instanceToRename.modLoader?.type === 'fabric' ? (
-                        <FabricIcon className="h-5 w-5 text-sky-400" />
-                      ) : instanceToRename.modLoader?.type === 'forge' ? (
-                        <ForgeIcon className="h-5 w-5 text-amber-400" />
-                      ) : (
-                        <GrassBlockIcon className="h-5 w-5 text-emerald-400" />
-                      )}
-                    </div>
                     <div className="min-w-0">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Current</span>
-                      <p className="text-xs font-black text-slate-300 truncate font-display">
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Current</span>
+                      <p className="text-xs font-black text-zinc-300 truncate font-display">
                         {instanceToRename.name}
                       </p>
                     </div>
                   </div>
 
                   {/* Transition Arrow */}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
                     <HiArrowRight size={16} />
                   </div>
 
                   {/* After (New Preview) */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 justify-end text-right">
                     <div className="min-w-0">
-                      <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider font-bold">New Preview</span>
+                      <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider font-bold">New Preview</span>
                       <p className="text-xs font-black text-white truncate font-display">
                         {newProfileName.trim() || 'My Minecraft Profile'}
                       </p>
@@ -734,14 +1080,14 @@ export default function InstancesPage() {
               {/* Input Area */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
                     Profile Name
                   </label>
                   <span className={cn(
                     'text-[10px] font-mono font-bold',
                     newProfileName.trim().length >= 2 && newProfileName.trim().length <= 32
-                      ? 'text-emerald-400'
-                      : 'text-slate-500'
+                      ? 'text-amber-400'
+                      : 'text-zinc-500'
                   )}>
                     {newProfileName.trim().length} / 32 chars
                   </span>
@@ -761,14 +1107,14 @@ export default function InstancesPage() {
                       if (e.key === 'Escape') setInstanceToRename(null)
                     }}
                     placeholder="Enter profile name..."
-                    className="w-full rounded-2xl border border-emerald-500/30 bg-black/60 pl-4 pr-10 py-3 text-sm font-mono text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all shadow-inner"
+                    className="w-full rounded-2xl border border-amber-500/30 bg-black/60 pl-4 pr-10 py-3 text-sm font-mono text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 transition-all shadow-inner"
                     autoFocus
                   />
                   {newProfileName && (
                     <button
                       type="button"
                       onClick={() => setNewProfileName('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
                     >
                       <HiXMark size={15} />
                     </button>
@@ -777,7 +1123,7 @@ export default function InstancesPage() {
 
                 {/* Quick Suffix Presets */}
                 <div className="flex items-center gap-1.5 pt-1 overflow-x-auto scrollbar-none">
-                  <span className="text-[10px] font-mono text-slate-500 shrink-0">Add Tag:</span>
+                  <span className="text-[10px] font-mono text-zinc-500 shrink-0">Add Tag:</span>
                   {['[PvP]', '[Survival]', '[Modded]', '[1.21]'].map((suffix) => (
                     <button
                       key={suffix}
@@ -788,7 +1134,7 @@ export default function InstancesPage() {
                         const combined = `${base} ${suffix}`.trim().slice(0, 32)
                         setNewProfileName(combined)
                       }}
-                      className="rounded-lg border border-white/10 bg-white/5 hover:border-emerald-400/40 hover:bg-white/10 px-2 py-0.5 text-[10px] font-mono text-slate-300 hover:text-white transition-all shrink-0"
+                      className="rounded-lg border border-white/10 bg-white/5 hover:border-amber-400/40 hover:bg-white/10 px-2 py-0.5 text-[10px] font-mono text-zinc-300 hover:text-white transition-all shrink-0"
                     >
                       {suffix}
                     </button>
@@ -816,7 +1162,7 @@ export default function InstancesPage() {
                     playSound('click')
                     setInstanceToRename(null)
                   }}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-bold text-slate-300 hover:bg-white/10 hover:text-white transition-all active:scale-95"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-bold text-zinc-300 hover:bg-white/10 hover:text-white transition-all active:scale-95"
                 >
                   Cancel
                 </button>
@@ -824,7 +1170,7 @@ export default function InstancesPage() {
                   type="button"
                   disabled={!newProfileName.trim() || newProfileName.trim() === instanceToRename.name}
                   onClick={handleSaveRename}
-                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+                  className="flex items-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-amber-500/30 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
                 >
                   <HiCheck size={15} className="stroke-[3]" />
                   <span>Save &amp; Apply</span>
@@ -868,11 +1214,11 @@ export default function InstancesPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white font-display">Delete Profile?</h3>
-                  <p className="text-xs text-slate-400">This action cannot be undone.</p>
+                  <p className="text-xs text-zinc-400">This action cannot be undone.</p>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <p className="text-xs text-zinc-300 leading-relaxed">
                 Are you sure you want to permanently delete profile{' '}
                 <strong className="text-white">&ldquo;{instanceToDelete.name}&rdquo;</strong>? All associated mods, saves, and configs will be deleted.
               </p>
@@ -884,7 +1230,7 @@ export default function InstancesPage() {
                     playSound('click')
                     setInstanceToDelete(null)
                   }}
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-zinc-300 hover:bg-white/10 hover:text-white transition-all"
                 >
                   Cancel
                 </button>

@@ -51,7 +51,7 @@ export default function HomePage() {
   const [installedModsCount, setInstalledModsCount] = useState<number>(0)
   const [skinKey, setSkinKey] = useState(0)
   const [skinZoom, setSkinZoom] = useState(1.0)
-  const [skinAnimation, setSkinAnimation] = useState<'idle' | 'none'>('idle')
+  const [skinAnimation, setSkinAnimation] = useState<'walk' | 'idle' | 'none'>('walk')
 
   const currentInstance: GameInstance | undefined = activeInstance || instances[0]
 
@@ -390,21 +390,24 @@ export default function HomePage() {
 
           {/* Animation Play/Pause Toggle */}
           <button
-            onClick={() => setSkinAnimation((prev) => (prev === 'idle' ? 'none' : 'idle'))}
-            title={skinAnimation === 'idle' ? 'Pause Animation' : 'Resume Animation'}
+            onClick={() => {
+              playSound('click')
+              setSkinAnimation((prev) => (prev === 'walk' ? 'none' : 'walk'))
+            }}
+            title={skinAnimation === 'walk' ? 'Pause Animation' : 'Play Animation'}
             className={`group relative flex h-8 w-8 items-center justify-center rounded-xl transition-all ${
-              skinAnimation === 'idle'
+              skinAnimation === 'walk'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
                 : 'bg-white/[0.04] text-zinc-500 hover:bg-white/[0.08] hover:text-zinc-200 border border-transparent'
             }`}
           >
-            {skinAnimation === 'idle' ? (
+            {skinAnimation === 'walk' ? (
               <HiPause className="h-4 w-4 text-emerald-400" />
             ) : (
               <HiPlay className="h-4 w-4 text-zinc-400" />
             )}
             <span className="pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-[#0C111D] border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white shadow-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30">
-              {skinAnimation === 'idle' ? 'Pause Animation' : 'Play Animation'}
+              {skinAnimation === 'walk' ? 'Pause Animation' : 'Play Animation'}
             </span>
           </button>
         </div>
