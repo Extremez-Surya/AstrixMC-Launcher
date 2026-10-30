@@ -125,8 +125,17 @@ export async function installModFile(
   const tempPath = join(cacheDir, `${fileName}.tmp-${Date.now()}`)
 
   try {
-    // 1. Download to temporary file
-    await downloadFile(downloadUrl, tempPath)
+    // 1. Download to temporary file with retry
+    try {
+      await downloadFile(downloadUrl, tempPath)
+    } catch (firstErr) {
+      if (existsSync(tempPath)) {
+        try { unlinkSync(tempPath) } catch {}
+      }
+      console.warn(`[AstrixMC ModManager] Retrying download for ${fileName}...`)
+      await new Promise((r) => setTimeout(r, 1200))
+      await downloadFile(downloadUrl, tempPath)
+    }
 
     // 2. Validate zip archive integrity for .jar mod and .zip pack files
     if (fileName.endsWith('.jar') || fileName.endsWith('.zip') || folderType === 'mods') {
@@ -536,25 +545,93 @@ export async function installFpsBoostPack(
   const existingFiles = readdirSync(modsDir).map((f) => f.toLowerCase())
   const modsToDownload: typeof compatibleMods = []
 
+  const isAlreadyInstalled = (slug: string, filename?: string): boolean => {
+    const cleanSlug = slug.toLowerCase()
+    const cleanFn = (filename || '').toLowerCase()
+    return existingFiles.some((f) => {
+      if (cleanFn && f === cleanFn) return true
+      if (!f.endsWith('.jar')) return false
+
+      if (cleanSlug === 'sodium') {
+        return (f.startsWith('sodium-fabric') || f.startsWith('sodium-mc') || f.startsWith('sodium-') || f.startsWith('sodium_')) && !f.includes('sodium-extra')
+      }
+      if (cleanSlug === 'sodium-extra') {
+        return f.includes('sodium-extra')
+      }
+      if (cleanSlug === 'fabric-api') {
+        return f.startsWith('fabric-api')
+      }
+      if (cleanSlug === 'ferrite-core') {
+        return f.startsWith('ferritecore') || f.startsWith('ferrite-core')
+      }
+      if (cleanSlug === 'badoptimizations') {
+        return f.startsWith('badoptimizations')
+      }
+      if (cleanSlug === 'dynamic-fps') {
+        return f.startsWith('dynamic-fps') || f.startsWith('dynamic_fps')
+      }
+      if (cleanSlug === 'iris') {
+        return f.startsWith('iris-') || f.startsWith('iris_')
+      }
+      if (cleanSlug === 'modmenu') {
+        return f.startsWith('modmenu')
+      }
+      if (cleanSlug === 'lithium') {
+        return f.startsWith('lithium')
+      }
+      if (cleanSlug === 'entityculling') {
+        return f.startsWith('entityculling')
+      }
+      if (cleanSlug === 'clumps') {
+        return f.startsWith('clumps')
+      }
+      if (cleanSlug === 'krypton') {
+        return f.startsWith('krypton')
+      }
+
+      return f.startsWith(cleanSlug + '-') || f.startsWith(cleanSlug + '_')
+    })
+  }
+
   for (const mod of compatibleMods) {
-    const fnLower = (mod.filename || '').toLowerCase()
-    const slugLower = (mod.slug || '').toLowerCase()
-    const alreadyInstalled = existingFiles.some(
-      (f) => f === fnLower || (f.endsWith('.jar') && (f.includes(slugLower) || (slugLower === 'fabric-api' && f.includes('fabric-api'))))
-    )
-    if (alreadyInstalled) {
+    if (isAlreadyInstalled(mod.slug, mod.filename)) {
       installed.push(mod.name)
     } else {
       modsToDownload.push(mod)
     }
   }
 
+  // Sort mods by foundation priority: fabric-api, sodium, iris first
+  const priorityOrder = [
+    'fabric-api',
+    'sodium',
+    'embeddium',
+    'iris',
+    'oculus',
+    'lithium',
+    'sodium-extra',
+    'modmenu',
+    'ferrite-core',
+    'entityculling',
+    'badoptimizations',
+    'dynamic-fps',
+    'clumps',
+    'krypton'
+  ]
+  modsToDownload.sort((a, b) => {
+    const idxA = priorityOrder.indexOf(a.slug)
+    const idxB = priorityOrder.indexOf(b.slug)
+    const orderA = idxA === -1 ? 99 : idxA
+    const orderB = idxB === -1 ? 99 : idxB
+    return orderA - orderB
+  })
+
   if (modsToDownload.length > 0) {
     let completed = 0
-    onProgress?.(`Fast downloading ${modsToDownload.length} FPS optimization mods in parallel...`)
+    onProgress?.(`Downloading ${modsToDownload.length} FPS optimization mods...`)
     
-    // Download remaining mods in parallel with concurrency limit of 6
-    await runLimited(modsToDownload, 6, async (mod) => {
+    // Download remaining mods with concurrency limit of 2 to preserve stable bandwidth
+    await runLimited(modsToDownload, 2, async (mod) => {
       try {
         sendInAppLog(`[AstrixMC FPS Boost] Downloading ${mod.name} (${++completed}/${modsToDownload.length})...`)
         const res = await installModFile(instanceId, mod.downloadUrl!, mod.filename!, 'mods', undefined, true)

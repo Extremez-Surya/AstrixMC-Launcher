@@ -37,12 +37,29 @@ export async function downloadFile(
   url: string,
   dest: string,
   onProgress?: (transferred: number, total: number) => void,
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
+  options?: { idleTimeoutMs?: number; maxTimeoutMs?: number }
 ): Promise<void> {
   if (!existsSync(dirname(dest))) mkdirSync(dirname(dest), { recursive: true })
 
+  const idleTimeoutMs = options?.idleTimeoutMs ?? 45000 // 45s of inactivity
+  const maxTimeoutMs = options?.maxTimeoutMs ?? 600000 // 10 min hard ceiling
+
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout
+  let idleTimer: NodeJS.Timeout | null = null
+
+  const resetIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      controller.abort(new Error(`Download stalled (no data for ${idleTimeoutMs / 1000}s) from ${url}`))
+    }, idleTimeoutMs)
+  }
+
+  const hardTimer = setTimeout(() => {
+    controller.abort(new Error(`Download exceeded maximum limit (${maxTimeoutMs / 1000}s) for ${url}`))
+  }, maxTimeoutMs)
+
+  resetIdleTimer()
 
   try {
     const res = await fetch(url, {
@@ -55,41 +72,45 @@ export async function downloadFile(
         ...headers
       }
     })
+
     if (!res.ok) {
       throw new Error(`Download failed (${res.status}) for ${url}`)
-    }
-
-    // Fast direct buffer write for individual files without progress listeners (mods, assets, textures)
-    if (!onProgress) {
-      const arrayBuffer = await res.arrayBuffer()
-      writeFileSync(dest, Buffer.from(arrayBuffer))
-      return
     }
 
     if (!res.body) {
       throw new Error(`Download body empty for ${url}`)
     }
+
     const total = Number(res.headers.get('content-length') ?? 0)
     const reader = res.body.getReader()
     const out = createWriteStream(dest)
     let transferred = 0
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (value) {
-        transferred += value.byteLength
-        onProgress?.(transferred, total)
-        if (!out.write(Buffer.from(value))) {
-          await new Promise<void>((resolve) => out.once('drain', resolve))
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        resetIdleTimer()
+        if (done) break
+        if (value) {
+          transferred += value.byteLength
+          onProgress?.(transferred, total)
+          if (!out.write(Buffer.from(value))) {
+            await new Promise<void>((resolve) => out.once('drain', resolve))
+          }
         }
       }
+
+      await new Promise<void>((resolve, reject) => {
+        out.end(() => resolve())
+        out.on('error', reject)
+      })
+    } catch (streamErr) {
+      out.destroy()
+      throw streamErr
     }
-    await new Promise<void>((resolve, reject) => {
-      out.end(() => resolve())
-      out.on('error', reject)
-    })
   } finally {
-    clearTimeout(timeoutId)
+    if (idleTimer) clearTimeout(idleTimer)
+    clearTimeout(hardTimer)
   }
 }
 
