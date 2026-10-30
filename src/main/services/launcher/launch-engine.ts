@@ -468,6 +468,14 @@ class LaunchEngine {
       )
     }
 
+    // Network & IPv4 preference: prevents Java from hanging on broken IPv6 routes to Mojang session server
+    customArgs.push(
+      '-Djava.net.preferIPv4Stack=true',
+      '-Djava.net.preferIPv4Addresses=true',
+      '-Dsun.net.client.defaultConnectTimeout=15000',
+      '-Dsun.net.client.defaultReadTimeout=15000'
+    )
+
     // High performance discrete GPU preference (NVIDIA / AMD)
     if (settings.forceDiscreteGpu !== false && process.platform === 'linux') {
       process.env.__NV_PRIME_RENDER_OFFLOAD = '1'

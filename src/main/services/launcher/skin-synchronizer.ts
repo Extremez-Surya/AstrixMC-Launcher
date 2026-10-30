@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync, copyFileSync, unlinkSync, readFil
 import { join } from 'path'
 import https from 'https'
 import http from 'http'
+import AdmZip from 'adm-zip'
 import { BrowserWindow } from 'electron'
 import type { MinecraftAccount } from '../../../shared/types/auth'
 import { getLauncherRoot } from '../store'
@@ -145,6 +146,119 @@ function isCslCompatible(mcVersion?: string): boolean {
 }
 
 /**
+ * Resolves player skin bytes from local data URI, remote texture, player name, or username.
+ */
+async function resolveAccountSkinBuffer(account: MinecraftAccount): Promise<Buffer | null> {
+  // 1. Local Data URI (base64)
+  if (account.skinUrl?.startsWith('data:image/')) {
+    const base64Data = account.skinUrl.replace(/^data:image\/\w+;base64,/, '')
+    return Buffer.from(base64Data, 'base64')
+  }
+
+  // 2. Direct HTTP/HTTPS texture url
+  if (account.skinUrl && account.skinUrl.startsWith('http') && !account.skinUrl.includes('/avatar/')) {
+    try {
+      const buf = await fetchBuffer(account.skinUrl)
+      if (buf && buf.length > 100) return buf
+    } catch {}
+  }
+
+  // 3. Custom target player skin
+  if (account.skinPlayerName && account.skinPlayerName.trim()) {
+    try {
+      const buf = await fetchBuffer(`https://minotar.net/skin/${encodeURIComponent(account.skinPlayerName.trim())}`)
+      if (buf && buf.length > 100) return buf
+    } catch {}
+  }
+
+  // 4. Default account username (minotar / mojang)
+  if (account.username && account.username.trim()) {
+    try {
+      const buf = await fetchBuffer(`https://minotar.net/skin/${encodeURIComponent(account.username.trim())}`)
+      if (buf && buf.length > 100) return buf
+    } catch {}
+  }
+
+  return null
+}
+
+/**
+ * Builds or updates the dynamic native AstrixSkin.zip resourcepack inside the instance.
+ * Overwrites all vanilla/default player skin models (Steve, Alex, Sunny, Zuri, etc.)
+ * so the player's skin appears reliably offline, online, and even if AuthLib read times out.
+ */
+function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
+  const rpDir = join(gameDirectory, 'resourcepacks')
+  if (!existsSync(rpDir)) {
+    mkdirSync(rpDir, { recursive: true })
+  }
+
+  const zip = new AdmZip()
+  const mcmeta = JSON.stringify(
+    {
+      pack: {
+        pack_format: 48,
+        supported_formats: {
+          min_inclusive: 1,
+          max_inclusive: 99
+        },
+        description: 'AstrixMC Dynamic Skin Pack'
+      }
+    },
+    null,
+    2
+  )
+
+  zip.addFile('pack.mcmeta', Buffer.from(mcmeta))
+
+  // Legacy Minecraft versions (1.8 - 1.19)
+  zip.addFile('assets/minecraft/textures/entity/steve.png', skinBuffer)
+  zip.addFile('assets/minecraft/textures/entity/alex.png', skinBuffer)
+
+  // Modern Minecraft versions (1.20 - 26.x) default models
+  const wideSkins = ['steve', 'sunny', 'zuri', 'efe', 'kai', 'makena', 'noor']
+  const slimSkins = ['alex', 'ari']
+
+  for (const s of wideSkins) {
+    zip.addFile(`assets/minecraft/textures/entity/player/wide/${s}.png`, skinBuffer)
+  }
+  for (const s of slimSkins) {
+    zip.addFile(`assets/minecraft/textures/entity/player/slim/${s}.png`, skinBuffer)
+  }
+
+  const outZip = join(rpDir, 'AstrixSkin.zip')
+  writeFileSync(outZip, zip.toBuffer())
+
+  // Ensure file/AstrixSkin.zip is active in options.txt
+  const optFile = join(gameDirectory, 'options.txt')
+  if (existsSync(optFile)) {
+    try {
+      let optContent = readFileSync(optFile, 'utf-8')
+      if (optContent.includes('resourcePacks:[')) {
+        if (!optContent.includes('file/AstrixSkin.zip')) {
+          optContent = optContent.replace(/resourcePacks:\[(.*?)\]/, (match, inner) => {
+            const list = inner
+              .split(',')
+              .map((s: string) => s.trim().replace(/^"|"$/g, ''))
+              .filter(Boolean)
+            if (!list.includes('vanilla')) list.unshift('vanilla')
+            if (!list.includes('file/AstrixSkin.zip')) list.push('file/AstrixSkin.zip')
+            return `resourcePacks:[${list.map((x: string) => `"${x}"`).join(',')}]`
+          })
+          writeFileSync(optFile, optContent, 'utf-8')
+          sendInAppLog('[AstrixMC SkinSync] Enabled AstrixSkin pack in options.txt')
+        }
+      } else {
+        optContent += '\nresourcePacks:["vanilla","file/AstrixSkin.zip"]'
+        writeFileSync(optFile, optContent, 'utf-8')
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+/**
  * Automatically synchronizes player skins and ensures skin loaders are active
  * so all players' skins (Mojang, SkinsRestorer, Ely.by, local) appear accurately in-game.
  */
@@ -159,38 +273,17 @@ export async function syncInGameSkin(
       modLoader?.type && ['fabric', 'quilt', 'forge', 'neoforge'].includes(modLoader.type.toLowerCase())
     )
 
-    // Remove legacy fallback resource packs (AstrixSkin.zip and Astrix-Cosmetics.zip)
-    // so default Steve and Alex player models are never corrupted with custom skins.
-    try {
-      const rpDir = join(gameDirectory, 'resourcepacks')
-      for (const pack of ['AstrixSkin.zip', 'Astrix-Cosmetics.zip']) {
-        const p = join(rpDir, pack)
-        if (existsSync(p)) {
-          try {
-            unlinkSync(p)
-            sendInAppLog(`[AstrixMC SkinSync] Removed legacy resourcepack: ${pack}`)
-          } catch {}
-        }
-      }
+    // 1. Resolve skin buffer from account or online texture endpoints
+    const skinBuffer = await resolveAccountSkinBuffer(account)
 
-      // Sanitize options.txt so removed resourcepacks are not loaded
-      const optFile = join(gameDirectory, 'options.txt')
-      if (existsSync(optFile)) {
-        let optText = readFileSync(optFile, 'utf-8')
-        if (optText.includes('Astrix-Cosmetics.zip') || optText.includes('AstrixSkin.zip')) {
-          optText = optText.replace(/,?\"file\/Astrix-Cosmetics\.zip\"/g, '')
-          optText = optText.replace(/,?\"file\/AstrixSkin\.zip\"/g, '')
-          optText = optText.replace(/\[,/g, '[').replace(/,,/g, ',').replace(/,\]/g, ']')
-          writeFileSync(optFile, optText, 'utf-8')
-          sendInAppLog('[AstrixMC SkinSync] Cleaned options.txt resourcepack list.')
-        }
-      }
-    } catch (e) {
-      // ignore
+    if (skinBuffer && skinBuffer.length > 100) {
+      // 2. Build native AstrixSkin.zip resourcepack for 100% reliable in-game skin display
+      buildAstrixSkinPack(gameDirectory, skinBuffer)
+      sendInAppLog(`[AstrixMC SkinSync] In-game skin synchronized for: ${account.username}`)
     }
 
     if (isModded) {
-      // 1. Ensure CustomSkinLoader mod is installed in instance mods/ ONLY for compatible MC versions
+      // 3. Ensure CustomSkinLoader mod is installed in instance mods/ ONLY for compatible MC versions (1.8 - 1.20)
       const modsDir = join(gameDirectory, 'mods')
       if (!existsSync(modsDir)) {
         mkdirSync(modsDir, { recursive: true })
@@ -212,12 +305,12 @@ export async function syncInGameSkin(
         if (existsSync(cslInstanceModPath)) {
           try {
             unlinkSync(cslInstanceModPath)
-            sendInAppLog(`[AstrixMC SkinSync] Removed incompatible CSL mod for MC ${mcVersion}`)
+            sendInAppLog(`[AstrixMC SkinSync] Cleaned legacy CSL mod for MC ${mcVersion}`)
           } catch {}
         }
       }
 
-      // 2. Ensure CustomSkinLoader configuration is active with full loadlist
+      // 4. Ensure CustomSkinLoader configuration is active with full loadlist
       const cslDir = join(gameDirectory, 'CustomSkinLoader')
       if (!existsSync(cslDir)) {
         mkdirSync(cslDir, { recursive: true })
@@ -268,35 +361,15 @@ export async function syncInGameSkin(
         console.warn('[SkinSync] Failed to write CustomSkinLoader config:', err)
       }
 
-      // 3. Synchronize local custom skin for the active user if configured
+      // 5. Synchronize local custom skin for CustomSkinLoader
       const cslSkinsDir = join(cslDir, 'LocalSkin', 'skins')
       const cslSkinFile = join(cslSkinsDir, `${account.username}.png`)
 
-      const hasCustomSkin =
-        Boolean(account.skinType === 'player' && account.skinPlayerName) ||
-        Boolean(account.skinType === 'custom' && account.skinUrl) ||
-        Boolean(account.skinPlayerName) ||
-        Boolean(account.skinUrl && !account.skinUrl.includes('/avatar/'))
-
-      if (hasCustomSkin) {
-        let skinBuffer: Buffer | null = null
-        if (account.skinUrl?.startsWith('data:image/')) {
-          const base64Data = account.skinUrl.replace(/^data:image\/\w+;base64,/, '')
-          skinBuffer = Buffer.from(base64Data, 'base64')
-        } else if (account.skinPlayerName) {
-          const targetName = account.skinPlayerName.trim()
-          skinBuffer = await fetchBuffer(`https://minotar.net/skin/${encodeURIComponent(targetName)}`)
-        } else if (account.skinUrl && account.skinUrl.startsWith('http')) {
-          skinBuffer = await fetchBuffer(account.skinUrl)
+      if (skinBuffer && skinBuffer.length > 100) {
+        if (!existsSync(cslSkinsDir)) {
+          mkdirSync(cslSkinsDir, { recursive: true })
         }
-
-        if (skinBuffer && skinBuffer.length > 100) {
-          if (!existsSync(cslSkinsDir)) {
-            mkdirSync(cslSkinsDir, { recursive: true })
-          }
-          writeFileSync(cslSkinFile, skinBuffer)
-          sendInAppLog(`[AstrixMC SkinSync] Synchronized player skin for: ${account.username}`)
-        }
+        writeFileSync(cslSkinFile, skinBuffer)
       } else {
         if (existsSync(cslSkinFile)) {
           try {
