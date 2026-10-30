@@ -30,7 +30,10 @@ import {
 import {
   FabricIcon,
   ForgeIcon,
-  GrassBlockIcon
+  NeoForgeIcon,
+  GrassBlockIcon,
+  SnapshotIcon,
+  VanillaCubeIcon
 } from '../components/common/GamingIcons'
 import CreateInstanceModal from '../components/instances/CreateInstanceModal'
 import ManageInstanceModal from '../components/instances/ManageInstanceModal'
@@ -39,11 +42,41 @@ import { useLaunch } from '../hooks/useLaunch'
 import type { GameInstance } from '../../shared/types/instance'
 import { playSound } from '../utils/sound'
 import { cn } from '../lib/cn'
+
+// Panoramic & Cover Landscape Banners
 import mcVillageImg from '../assets/mc_village_sunset.jpg'
+import mcCherryImg from '../assets/mc_cherry_biome.jpg'
+import mcTrialsImg from '../assets/mc_tricky_trials.jpg'
+import mcForgeImg from '../assets/mc_forge_cover.jpg'
+import mcBountifulImg from '../assets/mc_bountiful.jpg'
+import mcTinyImg from '../assets/mc_tiny_takeover.jpg'
+import mcLandscapeImg from '../assets/landscape.jpg'
 
 type SortOption = 'recently-opened' | 'name-asc' | 'name-desc' | 'version'
 type ActiveTab = 'all' | 'pinned'
 type ViewMode = 'grid' | 'list'
+
+/**
+ * Returns a high-res, aesthetic Minecraft landscape banner image for an instance
+ */
+function getInstanceBanner(instance: GameInstance): string {
+  if (instance.bannerUrl) return instance.bannerUrl
+  const loader = instance.modLoader?.type?.toLowerCase() || 'vanilla'
+
+  if (loader === 'fabric') {
+    return instance.name.length % 2 === 0 ? mcCherryImg : mcTrialsImg
+  }
+  if (loader === 'forge') {
+    return mcForgeImg
+  }
+  if (loader === 'neoforge') {
+    return mcTinyImg
+  }
+  // Vanilla / snapshots
+  const vanillaPool = [mcVillageImg, mcBountifulImg, mcLandscapeImg]
+  const charCodeSum = instance.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return vanillaPool[Math.abs(charCodeSum) % vanillaPool.length]
+}
 
 export default function InstancesPage() {
   const navigate = useNavigate()
@@ -307,40 +340,45 @@ export default function InstancesPage() {
     'version': 'Version'
   }
 
-  // Item icon graphics generator for cards
-  const renderInstanceItemGraphic = (instance: GameInstance, size = 'md') => {
+  // Real Official Modloader & Vanilla Icons
+  const renderInstanceItemGraphic = (instance: GameInstance, size: 'sm' | 'md' | 'lg' = 'md') => {
     const isFabric = instance.modLoader?.type?.toLowerCase() === 'fabric'
     const isForge = instance.modLoader?.type?.toLowerCase() === 'forge'
     const isNeoForge = instance.modLoader?.type?.toLowerCase() === 'neoforge'
 
+    const containerCls = cn(
+      'flex items-center justify-center rounded-2xl bg-[#0B0F19]/90 border border-white/15 shadow-xl backdrop-blur-md transition-all',
+      size === 'lg' ? 'h-20 w-20 p-3' : size === 'md' ? 'h-13 w-13 p-2' : 'h-8 w-8 rounded-xl p-1'
+    )
+    const imgCls = size === 'lg' ? 'h-14 w-14' : size === 'md' ? 'h-9 w-9' : 'h-6 w-6'
+
     if (isFabric) {
       return (
-        <div className={cn(
-          'flex items-center justify-center rounded-2xl bg-sky-950/40 border border-sky-500/20 text-sky-400 shadow-lg',
-          size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
-        )}>
-          <FabricIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+        <div className={containerCls}>
+          <FabricIcon className={imgCls} />
         </div>
       )
     }
 
-    if (isForge || isNeoForge) {
+    if (isNeoForge) {
       return (
-        <div className={cn(
-          'flex items-center justify-center rounded-2xl bg-amber-950/40 border border-amber-500/20 text-amber-400 shadow-lg',
-          size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
-        )}>
-          <ForgeIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+        <div className={containerCls}>
+          <NeoForgeIcon className={imgCls} />
+        </div>
+      )
+    }
+
+    if (isForge) {
+      return (
+        <div className={containerCls}>
+          <ForgeIcon className={imgCls} />
         </div>
       )
     }
 
     return (
-      <div className={cn(
-        'flex items-center justify-center rounded-2xl bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 shadow-lg',
-        size === 'lg' ? 'h-16 w-16' : 'h-12 w-12'
-      )}>
-        <GrassBlockIcon className={size === 'lg' ? 'h-10 w-10' : 'h-7 w-7'} />
+      <div className={containerCls}>
+        <GrassBlockIcon className={imgCls} />
       </div>
     )
   }
@@ -354,9 +392,14 @@ export default function InstancesPage() {
         transition={{ duration: 0.25 }}
         className="mb-6 flex items-center justify-between"
       >
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-display">
-          Library
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-display">
+            Library
+          </h1>
+          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-mono font-bold text-amber-400">
+            {instances.length} {instances.length === 1 ? 'profile' : 'profiles'}
+          </span>
+        </div>
 
         <motion.button
           whileHover={{ scale: 1.02 }}
@@ -366,55 +409,57 @@ export default function InstancesPage() {
             playSound('click')
             setIsModalOpen(true)
           }}
-          className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2 text-xs sm:text-sm font-extrabold text-black shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+          className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 px-4 py-2 text-xs sm:text-sm font-black text-black shadow-lg shadow-amber-500/25 active:scale-95 transition-all"
         >
           <HiPlus className="h-4 w-4 stroke-[3]" />
           <span>Create profile</span>
         </motion.button>
       </motion.div>
 
-      {/* ── HERO PANORAMA: SELECTED PROFILE BANNER ── */}
+      {/* ── HERO PANORAMA: SELECTED PROFILE BANNER WITH RICH MINECRAFT WALLPAPER ── */}
       {featuredInstance && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          className="relative mb-7 overflow-hidden rounded-3xl border border-white/10 bg-[#0A0E18]/90 shadow-2xl backdrop-blur-2xl"
+          className="relative mb-7 overflow-hidden rounded-3xl border border-white/15 bg-[#090D17]/95 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-2xl group"
         >
-          {/* Panoramic Minecraft landscape art */}
+          {/* Panoramic Minecraft landscape art with vivid saturation */}
           <div className="absolute inset-0 pointer-events-none">
             <img
-              src={mcVillageImg}
-              alt="Minecraft World Panorama"
-              className="h-full w-full object-cover object-center opacity-30"
+              src={getInstanceBanner(featuredInstance)}
+              alt="Selected Profile Banner"
+              className="h-full w-full object-cover object-center opacity-60 group-hover:scale-103 transition-transform duration-1000"
             />
-            {/* Dark vignette & side gradients */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#070A12] via-[#070A12]/85 to-[#070A12]/30" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#070A12]/90 via-transparent to-transparent" />
+            {/* Dark vignette & side gradients for deep contrast */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#070A12] via-[#070A12]/80 to-[#070A12]/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#070A12] via-transparent to-black/20" />
           </div>
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8">
             {/* Left Content */}
             <div className="flex flex-col gap-1 max-w-xl">
               <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-amber-400">
-                <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_#F59E0B]" />
+                <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_#F59E0B] animate-pulse" />
                 <span>SELECTED PROFILE</span>
               </div>
 
-              <h2 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate font-display">
+              <h2 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate font-display drop-shadow-md">
                 {featuredInstance.name}
               </h2>
 
-              <p className="text-xs sm:text-sm font-medium text-zinc-400">
-                Minecraft {featuredInstance.mcVersion}
-                {featuredInstance.modLoader?.type && (
-                  <>
-                    {' · '}
-                    <span className="capitalize">{featuredInstance.modLoader.type}</span>
-                    {featuredInstance.modLoader.version && ` ${featuredInstance.modLoader.version}`}
-                  </>
-                )}
-              </p>
+              <div className="mt-1 flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-300">
+                <span>Minecraft {featuredInstance.mcVersion}</span>
+                <span className="text-zinc-500">·</span>
+                <span className="capitalize text-amber-300 font-bold">
+                  {featuredInstance.modLoader?.type || 'Vanilla'}{' '}
+                  {featuredInstance.modLoader?.version || ''}
+                </span>
+                <span className="text-zinc-500">·</span>
+                <span className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-300">
+                  Ultra FPS Optimized
+                </span>
+              </div>
 
               {/* Action Buttons Row */}
               <div className="mt-4 sm:mt-5 flex items-center gap-3 flex-wrap">
@@ -422,7 +467,7 @@ export default function InstancesPage() {
                   type="button"
                   onClick={() => launchGame(featuredInstance.id)}
                   disabled={isLaunching}
-                  className="flex items-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 px-5 py-2.5 text-xs sm:text-sm font-extrabold text-black shadow-lg shadow-amber-500/25 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 px-5 py-2.5 text-xs sm:text-sm font-black text-black shadow-lg shadow-amber-500/30 active:scale-95 transition-all disabled:opacity-50"
                 >
                   <HiPlay className="h-4 w-4 fill-current stroke-current" />
                   <span>Launch Game</span>
@@ -435,16 +480,29 @@ export default function InstancesPage() {
                     setManagingInstance(featuredInstance)
                     setManageTab('mods')
                   }}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] hover:bg-white/[0.14] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm active:scale-95 transition-all"
+                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] hover:bg-white/[0.15] px-4 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm active:scale-95 transition-all backdrop-blur-md"
                 >
                   <HiAdjustmentsHorizontal className="h-4 w-4 text-zinc-300" />
                   <span>Manage profile</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click')
+                    openInstanceFolder(featuredInstance.id)
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/40 hover:bg-white/10 px-3 py-2.5 text-xs font-semibold text-zinc-300 hover:text-white transition-all backdrop-blur-md"
+                  title="Open Game Folder"
+                >
+                  <HiFolderOpen size={16} />
+                  <span className="hidden sm:inline">Folder</span>
                 </button>
               </div>
             </div>
 
             {/* Right Large Squircle Item Badge */}
-            <div className="hidden sm:flex items-center justify-center h-28 w-28 rounded-3xl bg-[#092017]/90 border border-emerald-500/30 p-4 shadow-2xl backdrop-blur-md shrink-0">
+            <div className="hidden sm:flex items-center justify-center h-28 w-28 rounded-3xl bg-[#091522]/90 border border-white/15 p-4 shadow-2xl backdrop-blur-xl shrink-0 group-hover:scale-105 transition-transform duration-300">
               {renderInstanceItemGraphic(featuredInstance, 'lg')}
             </div>
           </div>
@@ -725,94 +783,112 @@ export default function InstancesPage() {
           </button>
         </div>
       ) : viewMode === 'grid' ? (
-        /* ── SQUIRCLE CARD GRID (MATCHING ROCK CLIENT IMAGE 2) ── */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        /* ── SQUIRCLE CARD GRID WITH TOP COVER BANNERS (AESTHETIC & UNIQUE) ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {processedInstances.map((instance) => {
             const isSelected = activeInstance?.id === instance.id
             const isPinned = pinnedIds.includes(instance.id)
+            const bannerSrc = getInstanceBanner(instance)
 
             return (
               <motion.div
                 key={instance.id}
-                whileHover={{ y: -4 }}
+                whileHover={{ y: -5 }}
                 transition={{ duration: 0.2 }}
                 onClick={() => {
                   playSound('click')
                   setActiveInstance(instance)
                 }}
                 className={cn(
-                  'group relative flex flex-col justify-between rounded-2xl border p-4 shadow-xl transition-all min-h-[230px] cursor-pointer backdrop-blur-xl',
+                  'group relative flex flex-col justify-between rounded-3xl border overflow-hidden shadow-2xl transition-all duration-300 cursor-pointer backdrop-blur-xl',
                   isSelected
-                    ? 'border-amber-400/50 bg-[#0E1320]/90 shadow-[0_12px_35px_rgba(245,158,11,0.12)]'
-                    : 'border-white/10 bg-[#0A0D15]/80 hover:border-white/25 hover:bg-[#0E1320]/95'
+                    ? 'border-amber-400/60 bg-[#0B0F1C] shadow-[0_16px_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-400/30'
+                    : 'border-white/10 bg-[#090C16]/90 hover:border-white/25 hover:bg-[#0D1222]'
                 )}
               >
-                {/* Top Row: "✓ Selected" Tag or Pin */}
-                <div className="flex items-center justify-between w-full h-5">
-                  {isSelected ? (
-                    <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-400">
-                      <HiCheck className="h-3.5 w-3.5 stroke-[3]" />
-                      <span>Selected</span>
-                    </span>
-                  ) : (
-                    <span />
-                  )}
+                {/* ── CARD TOP COVER BANNER (MINECRAFT SCENIC LANDSCAPE) ── */}
+                <div className="relative h-28 w-full overflow-hidden bg-black/60">
+                  <img
+                    src={bannerSrc}
+                    alt={instance.name}
+                    className="h-full w-full object-cover object-center group-hover:scale-108 transition-transform duration-700"
+                  />
+                  {/* Atmospheric gradient overlay & soft bottom fade */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F1C] via-[#0B0F1C]/40 to-black/40" />
 
-                  {/* Bookmark Pin Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => togglePin(instance.id, e)}
-                    title={isPinned ? 'Unpin profile' : 'Pin profile'}
-                    className={cn(
-                      'rounded-md p-1 transition-all',
-                      isPinned
-                        ? 'text-amber-400 opacity-100'
-                        : 'text-zinc-500 opacity-0 group-hover:opacity-100 hover:text-white'
+                  {/* Top Bar on Banner: Selected Tag + Pin Bookmark */}
+                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+                    {isSelected ? (
+                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400 text-black font-black text-[10px] tracking-wide shadow-lg">
+                        <HiCheck className="h-3 w-3 stroke-[3]" />
+                        <span>SELECTED</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/15 text-[9px] font-mono font-bold text-zinc-300 backdrop-blur-md uppercase">
+                        {instance.modLoader?.type || 'Vanilla'}
+                      </span>
                     )}
-                  >
-                    <HiBookmark size={14} className={isPinned ? 'fill-current' : ''} />
-                  </button>
-                </div>
 
-                {/* Center Item Graphic */}
-                <div className="my-3 flex items-center justify-center">
-                  <div className="transition-transform duration-300 group-hover:scale-110">
-                    {renderInstanceItemGraphic(instance, 'md')}
+                    <button
+                      type="button"
+                      onClick={(e) => togglePin(instance.id, e)}
+                      title={isPinned ? 'Unpin profile' : 'Pin profile'}
+                      className={cn(
+                        'p-1.5 rounded-xl border backdrop-blur-md transition-all',
+                        isPinned
+                          ? 'bg-amber-400 text-black border-amber-300 shadow-md'
+                          : 'bg-black/50 border-white/15 text-zinc-400 hover:text-white hover:bg-black/80'
+                      )}
+                    >
+                      <HiBookmark size={13} className={isPinned ? 'fill-current' : ''} />
+                    </button>
+                  </div>
+
+                  {/* Overlapping 3D Modloader Badge */}
+                  <div className="absolute -bottom-4 left-4 z-20">
+                    <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-[#090D17] border-2 border-white/15 p-1 shadow-2xl group-hover:scale-105 group-hover:border-amber-400/50 transition-all">
+                      {renderInstanceItemGraphic(instance, 'sm')}
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Section: Name + Version/Loader Badges + Action Row */}
-                <div className="flex flex-col gap-2 mt-auto">
-                  <div className="font-display">
-                    <h3 className="text-sm font-black text-white truncate" title={instance.name}>
+                {/* ── CARD BODY ── */}
+                <div className="flex flex-col justify-between flex-1 p-4 pt-6 gap-3">
+                  <div>
+                    <h3
+                      className="text-sm font-black text-white truncate font-display group-hover:text-amber-300 transition-colors"
+                      title={instance.name}
+                    >
                       {instance.name}
                     </h3>
+
+                    {/* Version & Modloader Badges Row */}
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="rounded-md bg-white/[0.06] border border-white/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-zinc-300">
+                        {instance.mcVersion}
+                      </span>
+                      <span className="rounded-md bg-white/[0.06] border border-white/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-zinc-400 capitalize">
+                        {instance.modLoader?.type || 'Vanilla'}{' '}
+                        {instance.modLoader?.version
+                          ? `v${instance.modLoader.version.split('.').slice(0, 2).join('.')}`
+                          : ''}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Badges Row */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-400">
-                      {instance.mcVersion}
-                    </span>
-                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-400 capitalize">
-                      {instance.modLoader?.type || 'Vanilla'}{' '}
-                      {instance.modLoader?.version ? instance.modLoader.version.split('.').slice(0, 2).join('.') : ''}
-                    </span>
-                  </div>
-
-                  {/* Action Bar: Launch Game + Settings Gear + Ellipsis Menu */}
+                  {/* Action Bar: PLAY + Settings Gear + Ellipsis Menu */}
                   <div
-                    className="flex items-center gap-1.5 pt-1"
+                    className="flex items-center gap-1.5 pt-2 border-t border-white/[0.08]"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
                       disabled={isLaunching}
                       onClick={() => launchGame(instance.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400 text-amber-300 hover:text-black py-1.5 px-3 text-xs font-black transition-all active:scale-95 disabled:opacity-40"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black py-2 px-3 text-xs font-black transition-all active:scale-95 shadow-md shadow-amber-500/20 disabled:opacity-40"
                     >
                       <HiPlay className="h-3.5 w-3.5 fill-current" />
-                      <span>Launch Game</span>
+                      <span>PLAY</span>
                     </button>
 
                     <button
@@ -823,7 +899,7 @@ export default function InstancesPage() {
                         setManageTab('mods')
                       }}
                       title="Manage Profile Settings"
-                      className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.12] p-2 text-zinc-400 hover:text-white transition-colors"
+                      className="rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.14] p-2 text-zinc-400 hover:text-white transition-colors"
                     >
                       <HiAdjustmentsHorizontal size={15} />
                     </button>
@@ -838,7 +914,7 @@ export default function InstancesPage() {
                           setOpenMenuInstanceId(openMenuInstanceId === instance.id ? null : instance.id)
                         }}
                         title="More options"
-                        className="rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.12] p-2 text-zinc-400 hover:text-white transition-colors"
+                        className="rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.14] p-2 text-zinc-400 hover:text-white transition-colors"
                       >
                         <HiEllipsisHorizontal size={15} />
                       </button>
@@ -924,6 +1000,39 @@ export default function InstancesPage() {
               </motion.div>
             )
           })}
+
+          {/* ── "+ CREATE PROFILE" SQUIRCLE CARD ── */}
+          <motion.div
+            whileHover={{ y: -5 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              playSound('click')
+              setIsModalOpen(true)
+            }}
+            className="group relative flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-white/20 bg-[#090C16]/60 hover:border-amber-400/60 hover:bg-[#0D1222]/90 hover:shadow-[0_16px_40px_rgba(245,158,11,0.15)] backdrop-blur-xl p-6 text-center transition-all duration-300 min-h-[240px] overflow-hidden"
+          >
+            {/* Background subtle glow */}
+            <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
+              <img
+                src={mcCherryImg}
+                alt="Create Profile Cover"
+                className="h-full w-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#090C16] via-[#090C16]/80 to-transparent" />
+            </div>
+
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 group-hover:border-amber-400/50 group-hover:bg-amber-400/20 group-hover:text-amber-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-300">
+                <HiPlus size={28} className="stroke-[2.5]" />
+              </div>
+              <span className="mt-3.5 text-sm font-black font-display uppercase tracking-widest text-zinc-200 group-hover:text-white transition-colors">
+                Create Profile
+              </span>
+              <span className="mt-1 text-[11px] text-zinc-500 group-hover:text-zinc-400 transition-colors max-w-[200px]">
+                Deploy Fabric, Forge, or Vanilla with 1-click optimization
+              </span>
+            </div>
+          </motion.div>
         </div>
       ) : (
         /* ── LIST VIEW MODE ── */
@@ -942,7 +1051,7 @@ export default function InstancesPage() {
                 className={cn(
                   'flex items-center justify-between rounded-2xl border px-4 py-3 transition-all cursor-pointer backdrop-blur-xl',
                   isSelected
-                    ? 'border-amber-400/50 bg-[#0E1320]/90'
+                    ? 'border-amber-400/50 bg-[#0E1320]/90 shadow-[0_4px_20px_rgba(245,158,11,0.12)]'
                     : 'border-white/10 bg-[#0A0D15]/80 hover:border-white/20 hover:bg-[#0E1320]/90'
                 )}
               >
@@ -991,10 +1100,10 @@ export default function InstancesPage() {
                   <button
                     type="button"
                     onClick={() => launchGame(instance.id)}
-                    className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold px-4 py-2 text-xs"
+                    className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-extrabold px-4 py-2 text-xs shadow-md shadow-amber-500/20"
                   >
                     <HiPlay size={14} className="fill-current" />
-                    <span>Launch</span>
+                    <span>PLAY</span>
                   </button>
                 </div>
               </div>
