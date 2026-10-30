@@ -1,5 +1,5 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from 'fs'
-import { join } from 'path'
+import { cpSync, existsSync, mkdirSync, rmSync, statSync } from 'fs'
+import { join, dirname } from 'path'
 import { randomUUID } from 'crypto'
 import { shell } from 'electron'
 import { getInstancesRoot, getLauncherRoot, JSONStore } from '../store'
@@ -189,28 +189,46 @@ export function openInstanceFolder(id: string, subfolder?: string): boolean {
   const list = instancesStore.read()
   const target = getInstance(id) || list[0]
   if (target && target.gameDirectory) {
-    const targetDir = subfolder ? join(target.gameDirectory, subfolder) : target.gameDirectory
-    if (!existsSync(targetDir)) {
+    let targetPath = subfolder ? join(target.gameDirectory, subfolder) : target.gameDirectory
+
+    // Check if subfolder points to a specific file (e.g. has extension or is file on disk)
+    const hasExtension = subfolder ? /\.[a-zA-Z0-9_\-]+$/.test(subfolder) : false
+    const isExistingFile = existsSync(targetPath) ? !statSync(targetPath).isDirectory() : false
+
+    if (hasExtension || isExistingFile) {
+      if (existsSync(targetPath)) {
+        try {
+          shell.showItemInFolder(targetPath)
+          return true
+        } catch {}
+      }
+      // If file doesn't exist, fallback to opening its containing directory
+      targetPath = dirname(targetPath)
+    }
+
+    if (!existsSync(targetPath)) {
       try {
-        mkdirSync(targetDir, { recursive: true })
+        mkdirSync(targetPath, { recursive: true })
       } catch (err) {
-        console.error('Failed to create instance subfolder:', targetDir, err)
+        console.error('Failed to create instance subfolder:', targetPath, err)
       }
     }
-    shell.openPath(targetDir).catch(() => {
-      try { shell.showItemInFolder(targetDir) } catch {}
+    shell.openPath(targetPath).catch(() => {
+      try { shell.showItemInFolder(targetPath) } catch {}
     })
     return true
   }
 
   const fallbackDir = subfolder ? join(getLauncherRoot(), subfolder) : getLauncherRoot()
-  if (!existsSync(fallbackDir)) {
+  const fallbackHasExt = subfolder ? /\.[a-zA-Z0-9_\-]+$/.test(subfolder) : false
+  const resolvedFallback = fallbackHasExt ? dirname(fallbackDir) : fallbackDir
+  if (!existsSync(resolvedFallback)) {
     try {
-      mkdirSync(fallbackDir, { recursive: true })
+      mkdirSync(resolvedFallback, { recursive: true })
     } catch {}
   }
-  shell.openPath(fallbackDir).catch(() => {
-    try { shell.showItemInFolder(fallbackDir) } catch {}
+  shell.openPath(resolvedFallback).catch(() => {
+    try { shell.showItemInFolder(resolvedFallback) } catch {}
   })
   return true
 }

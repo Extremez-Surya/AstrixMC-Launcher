@@ -104,8 +104,24 @@ export async function installModFile(
     mkdirSync(targetDir, { recursive: true })
   }
 
+  // Use a dedicated cache directory for temp downloads so mods folder is NEVER polluted with .tmp files
+  const cacheDir = join(inst.gameDirectory, '.cache', 'downloads')
+  if (!existsSync(cacheDir)) {
+    mkdirSync(cacheDir, { recursive: true })
+  }
+
+  // Clean any old lingering .tmp files from previous aborted attempts
+  try {
+    const oldFiles = readdirSync(targetDir)
+    for (const f of oldFiles) {
+      if (f.includes('.tmp-') || f.endsWith('.tmp')) {
+        try { rmSync(join(targetDir, f), { force: true }) } catch {}
+      }
+    }
+  } catch {}
+
   const destPath = join(targetDir, fileName)
-  const tempPath = join(targetDir, `${fileName}.tmp-${Date.now()}`)
+  const tempPath = join(cacheDir, `${fileName}.tmp-${Date.now()}`)
 
   try {
     // 1. Download to temporary file
