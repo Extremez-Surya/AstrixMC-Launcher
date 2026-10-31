@@ -68,7 +68,9 @@ export function buildAstrixPackInDirectory(
     JSON.stringify(
       {
         pack: {
-          pack_format: 34,
+          pack_format: 64,
+          min_format: 1,
+          max_format: 999,
           description: 'AstrixMC — Glassmorphism Client UI'
         }
       },

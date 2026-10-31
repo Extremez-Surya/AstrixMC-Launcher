@@ -197,11 +197,9 @@ function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
   const mcmeta = JSON.stringify(
     {
       pack: {
-        pack_format: 48,
-        supported_formats: {
-          min_inclusive: 1,
-          max_inclusive: 99
-        },
+        pack_format: 64,
+        min_format: 1,
+        max_format: 999,
         description: 'AstrixMC Dynamic Skin Pack'
       }
     },
