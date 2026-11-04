@@ -27,6 +27,7 @@ export interface MinecraftSkinViewer3DProps {
   enableControls?: boolean
   enableZoom?: boolean
   defaultAnimation?: 'idle' | 'walk' | 'run' | 'fly' | 'none'
+  defaultBackView?: boolean
   showControlsBar?: boolean
   onModelChange?: (model: 'classic' | 'slim') => void
 }
@@ -73,6 +74,7 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
   enableControls = true,
   enableZoom = true,
   defaultAnimation = 'idle',
+  defaultBackView = false,
   showControlsBar = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -83,7 +85,7 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
   const [showOuterLayer, setShowOuterLayer] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [isBackView, setIsBackView] = useState(false)
+  const [isBackView, setIsBackView] = useState(defaultBackView)
 
   // Map 'classic' to skinview3d's 'default'
   const skinviewModelType = model === 'slim' ? 'slim' : 'default'
@@ -110,10 +112,16 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
         viewer.controls.dampingFactor = 0.1
       }
 
-      // Initial camera angle (subtle 3D quarter-turn)
-      viewer.camera.position.x = -18
-      viewer.camera.position.y = 12
-      viewer.camera.position.z = 42
+      // Initial camera angle (front quarter turn or back cape view)
+      if (defaultBackView) {
+        viewer.camera.position.x = 18
+        viewer.camera.position.y = 10
+        viewer.camera.position.z = -42
+      } else {
+        viewer.camera.position.x = -18
+        viewer.camera.position.y = 12
+        viewer.camera.position.z = 42
+      }
       viewer.camera.lookAt(0, 0, 0)
 
       // Set initial animation
