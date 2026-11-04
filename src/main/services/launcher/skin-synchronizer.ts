@@ -22,6 +22,10 @@ const CSL_MOD_FILENAME = 'CustomSkinLoader_Universal-15.1.jar'
 const CSL_DOWNLOAD_URL =
   'https://cdn.modrinth.com/data/idMHQ4n2/versions/yyYvYfZI/CustomSkinLoader_Universal-15.1.jar'
 
+const WAVEY_CAPES_FILENAME = 'waveycapes-fabric-1.11.3-mc26.2.jar'
+const WAVEY_CAPES_DOWNLOAD_URL =
+  'https://cdn.modrinth.com/data/kYuIpRLv/versions/qADFZPJi/waveycapes-fabric-1.11.3-mc26.2.jar'
+
 /**
  * Downloads a file via HTTPS or HTTP, following redirects.
  */
@@ -90,8 +94,21 @@ export async function ensureCustomSkinLoaderCached(): Promise<string> {
 }
 
 /**
- * Locates or caches the Java Agent for vanilla skin loading if available on the system.
+ * Ensures the Wavey Capes cloth physics mod is downloaded and cached locally.
  */
+export async function ensureWaveyCapesCached(): Promise<string> {
+  const cacheDir = join(getLauncherRoot(), 'assets', 'mods')
+  if (!existsSync(cacheDir)) {
+    mkdirSync(cacheDir, { recursive: true })
+  }
+  const cachedJarPath = join(cacheDir, WAVEY_CAPES_FILENAME)
+  if (!existsSync(cachedJarPath)) {
+    sendInAppLog('[AstrixMC SkinSync] Downloading Wavey Capes physics mod to cache...')
+    await downloadFile(WAVEY_CAPES_DOWNLOAD_URL, cachedJarPath)
+  }
+  return cachedJarPath
+}
+
 export function getSkinAgentPath(): string | null {
   const assetsAgentPath = join(getLauncherRoot(), 'assets', 'agents', 'skin-agent.jar')
   if (existsSync(assetsAgentPath)) {
@@ -133,12 +150,8 @@ export function getSkinAgentJvmArgs(modLoader?: { type: string; version: string 
   return []
 }
 
-function isCslCompatible(mcVersion?: string): boolean {
-  if (!mcVersion) return false
-  const parts = mcVersion.split('.')
-  const major = parseInt(parts[0], 10)
-  const minor = parseInt(parts[1] || '0', 10)
-  return major === 1 && minor <= 20
+function isCslCompatible(_mcVersion?: string): boolean {
+  return true
 }
 
 /**
@@ -315,23 +328,27 @@ export async function syncInGameSkin(
       }
 
       const cslInstanceModPath = join(modsDir, CSL_MOD_FILENAME)
-      if (isCslCompatible(mcVersion)) {
-        try {
-          const cachedJarPath = await ensureCustomSkinLoaderCached()
-          if (!existsSync(cslInstanceModPath)) {
-            copyFileSync(cachedJarPath, cslInstanceModPath)
-            sendInAppLog('[AstrixMC SkinSync] Installed CustomSkinLoader Universal to mods directory.')
-          }
-        } catch (err) {
-          // ignore
+      try {
+        const cachedJarPath = await ensureCustomSkinLoaderCached()
+        if (!existsSync(cslInstanceModPath)) {
+          copyFileSync(cachedJarPath, cslInstanceModPath)
+          sendInAppLog('[AstrixMC SkinSync] Installed CustomSkinLoader Universal to mods directory.')
         }
-      } else {
-        // Modern version: remove incompatible CSL mod to prevent game launch crash
-        if (existsSync(cslInstanceModPath)) {
+      } catch (err) {
+        // ignore
+      }
+
+      // 3.1 Ensure Wavey Capes is installed for Fabric instances (dynamic cloth simulation)
+      if (modLoader?.type?.toLowerCase() === 'fabric') {
+        const waveyModPath = join(modsDir, WAVEY_CAPES_FILENAME)
+        if (!existsSync(waveyModPath)) {
           try {
-            unlinkSync(cslInstanceModPath)
-            sendInAppLog(`[AstrixMC SkinSync] Cleaned legacy CSL mod for MC ${mcVersion}`)
-          } catch {}
+            const cachedWavey = await ensureWaveyCapesCached()
+            copyFileSync(cachedWavey, waveyModPath)
+            sendInAppLog('[AstrixMC SkinSync] Installed Wavey Capes mod for realistic cloth physics.')
+          } catch (err) {
+            // ignore
+          }
         }
       }
 
@@ -348,15 +365,15 @@ export async function syncInGameSkin(
         enable: true,
         loadlist: [
           {
-            name: 'Server',
-            type: 'GameProfile'
-          },
-          {
             name: 'Local',
             type: 'Legacy',
             skin: 'LocalSkin/skins/{USERNAME}.png',
             cape: 'LocalSkin/capes/{USERNAME}.png',
             model: 'auto'
+          },
+          {
+            name: 'Server',
+            type: 'GameProfile'
           },
           {
             name: 'Mojang',
