@@ -11,7 +11,9 @@ import {
   HiChevronLeft,
   HiChevronRight,
   HiMagnifyingGlass,
-  HiUser
+  HiUser,
+  HiFire,
+  HiArrowPath
 } from 'react-icons/hi2'
 import { useAuth } from '../hooks/useAuth'
 import { useAuthStore } from '../stores/auth-store'
@@ -115,6 +117,8 @@ export default function CapesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [globalFrame, setGlobalFrame] = useState(0)
+  const [sortBy, setSortBy] = useState<'featured' | 'popular' | 'random'>('featured')
+  const [randomSeed, setRandomSeed] = useState(0)
 
   const [selectedCapeId, setSelectedCapeId] = useState<string | null>(activeAccount?.capeId || WORLDWIDE_CAPES[0].id)
   const [previewCapeUrl, setPreviewCapeUrl] = useState<string | null>(activeAccount?.capeUrl || null)
@@ -162,7 +166,7 @@ export default function CapesPage() {
     }
   }, [globalFrame, currentCapeItem])
 
-  // Filtered capes
+  // Filtered and sorted capes
   const filteredCapes = useMemo(() => {
     let list = WORLDWIDE_CAPES
     if (activeTab === 'animated') {
@@ -176,8 +180,18 @@ export default function CapesPage() {
       list = list.filter((c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || (c.badge && c.badge.toLowerCase().includes(q)))
     }
 
+    if (sortBy === 'popular') {
+      list = [...list].sort((a, b) => (b.likes || 0) - (a.likes || 0))
+    } else if (sortBy === 'random') {
+      list = [...list].sort((a, b) => {
+        const hashA = (a.id + randomSeed).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+        const hashB = (b.id + randomSeed).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+        return (hashA % 100) - (hashB % 100)
+      })
+    }
+
     return list
-  }, [activeTab, searchQuery])
+  }, [activeTab, searchQuery, sortBy, randomSeed])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredCapes.length / ITEMS_PER_PAGE))
@@ -520,17 +534,57 @@ export default function CapesPage() {
                 ))}
               </div>
 
-              {/* Search Bar */}
+              {/* Discovery Modes & Search Bar */}
               {activeTab !== 'nickname' && activeTab !== 'custom' && (
-                <div className="relative flex items-center">
-                  <HiMagnifyingGlass className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search cape name..."
-                    className="w-52 pl-9 pr-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center p-0.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click')
+                        setSortBy('popular')
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all',
+                        sortBy === 'popular'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      )}
+                      title="Sort by worldwide popularity"
+                    >
+                      <HiFire className="h-3.5 w-3.5 text-amber-400" />
+                      Popular
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playSound('click')
+                        setSortBy('random')
+                        setRandomSeed((s) => s + 1)
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all',
+                        sortBy === 'random'
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      )}
+                      title="Discover random worldwide capes"
+                    >
+                      <HiArrowPath className="h-3.5 w-3.5 text-purple-400" />
+                      Random
+                    </button>
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <HiMagnifyingGlass className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search cape name..."
+                      className="w-44 pl-9 pr-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                    />
+                  </div>
                 </div>
               )}
             </div>
