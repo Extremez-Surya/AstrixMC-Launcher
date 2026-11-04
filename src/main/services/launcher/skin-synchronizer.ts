@@ -124,8 +124,6 @@ export function getSkinAgentJvmArgs(modLoader?: { type: string; version: string 
   const isModded = Boolean(
     modLoader?.type && ['fabric', 'quilt', 'forge', 'neoforge'].includes(modLoader.type.toLowerCase())
   )
-  // For modded instances, CustomSkinLoader is loaded via the instance mods directory.
-  // For vanilla instances, inject the javaagent if available.
   if (!isModded) {
     const agentPath = getSkinAgentPath()
     if (agentPath && existsSync(agentPath)) {
@@ -140,8 +138,6 @@ function isCslCompatible(mcVersion?: string): boolean {
   const parts = mcVersion.split('.')
   const major = parseInt(parts[0], 10)
   const minor = parseInt(parts[1] || '0', 10)
-  // Only Minecraft 1.8 through 1.20 are supported by CustomSkinLoader Universal 15.1
-  // Modern Minecraft (1.21+ and 26.x) causes Mixin crashes if ancient CSL is loaded
   return major === 1 && minor <= 20
 }
 
@@ -183,11 +179,33 @@ async function resolveAccountSkinBuffer(account: MinecraftAccount): Promise<Buff
 }
 
 /**
- * Builds or updates the dynamic native AstrixSkin.zip resourcepack inside the instance.
- * Overwrites all vanilla/default player skin models (Steve, Alex, Sunny, Zuri, etc.)
- * so the player's skin appears reliably offline, online, and even if AuthLib read times out.
+ * Resolves player cape bytes from local data URI or remote texture.
  */
-function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
+async function resolveAccountCapeBuffer(account: MinecraftAccount): Promise<Buffer | null> {
+  if (!account.capeUrl) return null
+
+  // 1. Local Data URI (base64)
+  if (account.capeUrl.startsWith('data:image/')) {
+    const base64Data = account.capeUrl.replace(/^data:image\/\w+;base64,/, '')
+    return Buffer.from(base64Data, 'base64')
+  }
+
+  // 2. Direct HTTP/HTTPS texture url
+  if (account.capeUrl.startsWith('http')) {
+    try {
+      const buf = await fetchBuffer(account.capeUrl)
+      if (buf && buf.length > 50) return buf
+    } catch {}
+  }
+
+  return null
+}
+
+/**
+ * Builds or updates the dynamic native AstrixSkin.zip resourcepack inside the instance.
+ * Overwrites all vanilla/default player skin models and cape/elytra textures.
+ */
+function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer | null, capeBuffer: Buffer | null): void {
   const rpDir = join(gameDirectory, 'resourcepacks')
   if (!existsSync(rpDir)) {
     mkdirSync(rpDir, { recursive: true })
@@ -200,7 +218,7 @@ function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
         pack_format: 64,
         min_format: 1,
         max_format: 999,
-        description: 'AstrixMC Dynamic Skin Pack'
+        description: 'AstrixMC Dynamic Skin & Cape Pack'
       }
     },
     null,
@@ -209,19 +227,26 @@ function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
 
   zip.addFile('pack.mcmeta', Buffer.from(mcmeta))
 
-  // Legacy Minecraft versions (1.8 - 1.19)
-  zip.addFile('assets/minecraft/textures/entity/steve.png', skinBuffer)
-  zip.addFile('assets/minecraft/textures/entity/alex.png', skinBuffer)
+  if (skinBuffer && skinBuffer.length > 100) {
+    // Legacy Minecraft versions (1.8 - 1.19)
+    zip.addFile('assets/minecraft/textures/entity/steve.png', skinBuffer)
+    zip.addFile('assets/minecraft/textures/entity/alex.png', skinBuffer)
 
-  // Modern Minecraft versions (1.20 - 26.x) default models
-  const wideSkins = ['steve', 'sunny', 'zuri', 'efe', 'kai', 'makena', 'noor']
-  const slimSkins = ['alex', 'ari']
+    // Modern Minecraft versions (1.20 - 26.x) default models
+    const wideSkins = ['steve', 'sunny', 'zuri', 'efe', 'kai', 'makena', 'noor']
+    const slimSkins = ['alex', 'ari']
 
-  for (const s of wideSkins) {
-    zip.addFile(`assets/minecraft/textures/entity/player/wide/${s}.png`, skinBuffer)
+    for (const s of wideSkins) {
+      zip.addFile(`assets/minecraft/textures/entity/player/wide/${s}.png`, skinBuffer)
+    }
+    for (const s of slimSkins) {
+      zip.addFile(`assets/minecraft/textures/entity/player/slim/${s}.png`, skinBuffer)
+    }
   }
-  for (const s of slimSkins) {
-    zip.addFile(`assets/minecraft/textures/entity/player/slim/${s}.png`, skinBuffer)
+
+  if (capeBuffer && capeBuffer.length > 50) {
+    zip.addFile('assets/minecraft/textures/entity/cape.png', capeBuffer)
+    zip.addFile('assets/minecraft/textures/entity/elytra.png', capeBuffer)
   }
 
   const outZip = join(rpDir, 'AstrixSkin.zip')
@@ -257,8 +282,7 @@ function buildAstrixSkinPack(gameDirectory: string, skinBuffer: Buffer): void {
 }
 
 /**
- * Automatically synchronizes player skins and ensures skin loaders are active
- * so all players' skins (Mojang, SkinsRestorer, Ely.by, local) appear accurately in-game.
+ * Automatically synchronizes player skins and capes, and ensures skin loaders are active.
  */
 export async function syncInGameSkin(
   gameDirectory: string,
@@ -271,13 +295,14 @@ export async function syncInGameSkin(
       modLoader?.type && ['fabric', 'quilt', 'forge', 'neoforge'].includes(modLoader.type.toLowerCase())
     )
 
-    // 1. Resolve skin buffer from account or online texture endpoints
+    // 1. Resolve skin and cape buffers
     const skinBuffer = await resolveAccountSkinBuffer(account)
+    const capeBuffer = await resolveAccountCapeBuffer(account)
 
-    if (skinBuffer && skinBuffer.length > 100) {
-      // 2. Build native AstrixSkin.zip resourcepack for 100% reliable in-game skin display
-      buildAstrixSkinPack(gameDirectory, skinBuffer)
-      sendInAppLog(`[AstrixMC SkinSync] In-game skin synchronized for: ${account.username}`)
+    if ((skinBuffer && skinBuffer.length > 100) || (capeBuffer && capeBuffer.length > 50)) {
+      // 2. Build native AstrixSkin.zip resourcepack for 100% reliable in-game skin & cape display
+      buildAstrixSkinPack(gameDirectory, skinBuffer, capeBuffer)
+      sendInAppLog(`[AstrixMC SkinSync] In-game skin & cape synchronized for: ${account.username}`)
     }
 
     if (isModded) {
@@ -308,7 +333,7 @@ export async function syncInGameSkin(
         }
       }
 
-      // 4. Ensure CustomSkinLoader configuration is active with full loadlist
+      // 4. Ensure CustomSkinLoader configuration is active with full loadlist (skins + capes)
       const cslDir = join(gameDirectory, 'CustomSkinLoader')
       if (!existsSync(cslDir)) {
         mkdirSync(cslDir, { recursive: true })
@@ -328,6 +353,7 @@ export async function syncInGameSkin(
             name: 'Local',
             type: 'Legacy',
             skin: 'LocalSkin/skins/{USERNAME}.png',
+            cape: 'LocalSkin/capes/{USERNAME}.png',
             model: 'auto'
           },
           {
@@ -372,6 +398,23 @@ export async function syncInGameSkin(
         if (existsSync(cslSkinFile)) {
           try {
             unlinkSync(cslSkinFile)
+          } catch {}
+        }
+      }
+
+      // 6. Synchronize local custom cape for CustomSkinLoader
+      const cslCapesDir = join(cslDir, 'LocalSkin', 'capes')
+      const cslCapeFile = join(cslCapesDir, `${account.username}.png`)
+
+      if (capeBuffer && capeBuffer.length > 50) {
+        if (!existsSync(cslCapesDir)) {
+          mkdirSync(cslCapesDir, { recursive: true })
+        }
+        writeFileSync(cslCapeFile, capeBuffer)
+      } else {
+        if (existsSync(cslCapeFile)) {
+          try {
+            unlinkSync(cslCapeFile)
           } catch {}
         }
       }

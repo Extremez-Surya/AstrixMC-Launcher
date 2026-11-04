@@ -14,6 +14,7 @@ import { getInstancesRoot, getLauncherRoot } from '../store'
 import { getInstance, updateInstance } from '../instances/instance-manager'
 import { prepareModLoader } from '../modloaders/loader-manager'
 import { discordRpcService } from '../discord-rpc'
+import { computeSmartRam } from './smart-ram'
 
 // Modern, ultra-smooth G1GC client optimization flags for high FPS without memory freeze
 const FPS_BOOST_JVM_ARGS = [
@@ -353,6 +354,14 @@ class LaunchEngine {
       this.instanceSessionLogs.set(config.instanceId, [])
     }
     this.sendConsoleLog(`[AstrixMC Launcher] Initializing launch sequence (instance: ${config.instanceId || 'default'})...`)
+    this.sendProgress({
+      stage: 'preparing',
+      progress: 3,
+      message: 'Initializing Astrix launch pipeline...'
+    })
+    // Yield to the event loop immediately so IPC ACKs and UI remains 100% responsive
+    await new Promise((resolve) => setImmediate(resolve))
+
     const settings = getSettings()
 
     // 1. Resolve Account
@@ -418,11 +427,6 @@ class LaunchEngine {
       }
     }
 
-    // Ensure at least 4GB max memory for modern Minecraft instances (1.20+ / 26.x) to prevent 0xC0000005 off-heap exhaustion
-    if (memMax < 4) {
-      memMax = 4
-    }
-
     // 3. Resolve Optimal Java Runtime (Matches MC version requirement; avoids Java 26 crashes on 26.2/Fabric)
     const preferredJava = config.javaPath || instJavaPath || settings.javaPath
     let javaPath = findBestJavaForVersion(mcVersion, preferredJava)
@@ -447,6 +451,14 @@ class LaunchEngine {
     // Always ensure java.exe is used rather than javaw.exe on Windows to prevent FreeConsole() stream breaks
     javaPath = normalizeJavaExe(javaPath)
     this.sendConsoleLog(`[AstrixMC Launcher] Java runtime selected for MC ${mcVersion}: ${javaPath}`)
+
+    // 4. Intelligent Smart RAM Auto-Budgeter (Prevents 0xC0000005 OS crash and OOM loop)
+    const javaMajor = parseJavaMajorVersion(javaPath) || 21
+    const smartRam = computeSmartRam(memMin, memMax, javaMajor)
+    if (smartRam.reason) {
+      this.sendConsoleLog(`[AstrixMC Launcher] ${smartRam.reason}`)
+    }
+    customArgs.push(...smartRam.jvmArgs)
 
     // Add modern Java reflection opens & native access flags for modern Minecraft / Fabric
     const isModernMc =
@@ -487,13 +499,17 @@ class LaunchEngine {
       mkdirSync(gameDirectory, { recursive: true })
     }
 
-    // Auto-resolve any missing Fabric/Quilt mod dependencies (e.g. yacl, cicada, fabric-api)
+    // Auto-resolve any missing Fabric/Quilt mod dependencies (with 8-sec safety timeout so it never hangs launch)
     if (modLoader?.type === 'fabric' || modLoader?.type === 'quilt') {
       try {
+        this.sendProgress({ stage: 'preparing', progress: 12, message: 'Checking mod dependencies...' })
         const { resolveMissingModDependencies } = await import('../mods/mod-manager')
-        await resolveMissingModDependencies(join(gameDirectory, 'mods'), mcVersion, modLoader.type)
+        await Promise.race([
+          resolveMissingModDependencies(join(gameDirectory, 'mods'), mcVersion, modLoader.type),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Mod dependency timeout')), 8000))
+        ])
       } catch (depErr) {
-        console.warn('[LaunchEngine] Dependency auto-resolution warning:', depErr)
+        console.warn('[LaunchEngine] Dependency check completed/timed out:', depErr)
       }
     }
 
@@ -654,14 +670,9 @@ class LaunchEngine {
         message: `Starting Minecraft ${mcVersion}...`
       })
 
-      // Normalize memory units: values > 64 are in Megabytes, safely clamp to 2G - 6G
-      let resolvedMax = memMax > 64 ? Math.round(memMax / 1024) : Math.round(memMax)
-      let resolvedMin = memMin > 64 ? Math.round(memMin / 1024) : Math.round(memMin)
-      resolvedMax = Math.max(2, Math.min(resolvedMax || 4, 6))
-      resolvedMin = Math.max(1, Math.min(resolvedMin || 2, resolvedMax))
-
-      const maxMemStr = `${resolvedMax}G`
-      const minMemStr = `${resolvedMin}G`
+      // Memory allocation safely bounded by Smart RAM Guard
+      const maxMemStr = `${smartRam.allocatedMaxGb}G`
+      const minMemStr = `${smartRam.allocatedMinGb}G`
 
       // Options for MCLC
       const maxDownloadSockets = Math.max(2, Math.min(8, Number(settings.simultaneousDownloads) || 6))

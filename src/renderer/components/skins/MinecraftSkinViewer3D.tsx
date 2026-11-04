@@ -4,19 +4,21 @@ import {
   IdleAnimation,
   WalkingAnimation,
   RunningAnimation,
-  FlyingAnimation,
   PlayerAnimation
 } from 'skinview3d'
 import {
   HiArrowPath,
   HiPlay,
   HiPause,
-  HiEye
+  HiEye,
+  HiArrowsRightLeft
 } from 'react-icons/hi2'
 import { cn } from '../../lib/cn'
 
 export interface MinecraftSkinViewer3DProps {
   skinUrl?: string
+  capeUrl?: string
+  backEquipment?: 'cape' | 'elytra'
   playerName?: string
   model?: 'classic' | 'slim' | 'default'
   width?: number
@@ -40,11 +42,9 @@ export function resolveSkinTextureUrl(skinUrl?: string, playerName?: string): st
 
   // 2. If direct textures.minecraft.net or full image URL
   if (skinUrl && (skinUrl.startsWith('http://') || skinUrl.startsWith('https://'))) {
-    // If it's already a full texture link
     if (skinUrl.includes('textures.minecraft.net') || skinUrl.includes('/skin/')) {
       return skinUrl
     }
-    // If it was an mc-heads body or avatar render, extract the player name if possible
     const match = skinUrl.match(/\/(body|avatar)\/([^/]+)/)
     if (match && match[2] && !playerName) {
       playerName = decodeURIComponent(match[2])
@@ -54,7 +54,6 @@ export function resolveSkinTextureUrl(skinUrl?: string, playerName?: string): st
   // 3. If player name is known
   if (playerName && playerName.trim()) {
     const clean = playerName.trim()
-    // minotar.net/skin/{name} is the standard reliable 64x64 raw skin texture endpoint
     return `https://minotar.net/skin/${encodeURIComponent(clean)}`
   }
 
@@ -64,6 +63,8 @@ export function resolveSkinTextureUrl(skinUrl?: string, playerName?: string): st
 
 export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
   skinUrl,
+  capeUrl,
+  backEquipment = 'cape',
   playerName,
   model = 'classic',
   width = 280,
@@ -82,6 +83,7 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
   const [showOuterLayer, setShowOuterLayer] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+  const [isBackView, setIsBackView] = useState(false)
 
   // Map 'classic' to skinview3d's 'default'
   const skinviewModelType = model === 'slim' ? 'slim' : 'default'
@@ -105,7 +107,6 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
         viewer.controls.enableRotate = enableControls
         viewer.controls.enableZoom = enableZoom
         viewer.controls.enablePan = false
-        // Smooth damping
         viewer.controls.dampingFactor = 0.1
       }
 
@@ -169,7 +170,6 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
       })
       .catch((err) => {
         console.warn('[SkinViewer3D] Texture load warning, trying fallback:', err)
-        // If primary texture endpoint failed (e.g. minotar rate limit), try mc-heads / crafatar
         if (playerName && !textureTarget.includes('mc-heads.net')) {
           const fallback = `https://mc-heads.net/skin/${encodeURIComponent(playerName)}`
           viewer
@@ -191,6 +191,26 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
         }
       })
   }, [skinUrl, playerName, skinviewModelType])
+
+  // Load/update Cape texture whenever capeUrl or backEquipment changes
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer) return
+
+    if (capeUrl && capeUrl.trim().length > 0) {
+      viewer
+        .loadCape(capeUrl, {
+          backEquipment: backEquipment || 'cape'
+        })
+        .catch((err) => {
+          console.warn('[SkinViewer3D] Cape load warning:', err)
+        })
+    } else {
+      try {
+        viewer.resetCape()
+      } catch {}
+    }
+  }, [capeUrl, backEquipment])
 
   // Toggle animation
   const handleToggleAnimation = useCallback(
@@ -232,6 +252,7 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
     const viewer = viewerRef.current
     if (!viewer) return
 
+    setIsBackView(false)
     viewer.camera.position.x = -18
     viewer.camera.position.y = 12
     viewer.camera.position.z = 42
@@ -241,6 +262,32 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
       viewer.controls.update()
     }
   }, [])
+
+  // Flip Front / Back View to admire cape
+  const handleFlipView = useCallback(() => {
+    const viewer = viewerRef.current
+    if (!viewer) return
+
+    const nextBack = !isBackView
+    setIsBackView(nextBack)
+
+    if (nextBack) {
+      // Rotate camera to view back / cape
+      viewer.camera.position.x = 18
+      viewer.camera.position.y = 10
+      viewer.camera.position.z = -42
+    } else {
+      // Front view
+      viewer.camera.position.x = -18
+      viewer.camera.position.y = 12
+      viewer.camera.position.z = 42
+    }
+    viewer.camera.lookAt(0, 0, 0)
+    if (viewer.controls) {
+      viewer.controls.target.set(0, 0, 0)
+      viewer.controls.update()
+    }
+  }, [isBackView])
 
   // Toggle outer jacket/hat layer
   const handleToggleOuterLayer = useCallback(() => {
@@ -307,6 +354,19 @@ export const MinecraftSkinViewer3D: React.FC<MinecraftSkinViewer3DProps> = ({
             title="Reset 3D camera view"
           >
             <HiArrowPath size={13} />
+          </button>
+
+          {/* Flip Front / Back View (Cape View) */}
+          <button
+            type="button"
+            onClick={handleFlipView}
+            className={cn(
+              'flex items-center justify-center h-6 w-6 rounded-lg text-[11px] transition-colors',
+              isBackView ? 'text-amber-400 bg-amber-500/15' : 'text-slate-300 hover:text-white hover:bg-white/10'
+            )}
+            title={isBackView ? 'View Front Side' : 'View Back (Cape View)'}
+          >
+            <HiArrowsRightLeft size={13} />
           </button>
 
           {/* Animation Toggle: Idle / Walk / Pause */}

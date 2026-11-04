@@ -20,6 +20,7 @@ import AchievementsPage from './pages/AchievementsPage'
 import NewsPage from './pages/NewsPage'
 import SettingsPage from './pages/SettingsPage'
 import SkinSelectorPage from './pages/SkinSelectorPage'
+import CapesPage from './pages/CapesPage'
 import ScreenshotsPage from './pages/ScreenshotsPage'
 import InstanceDetailPage from './pages/InstanceDetailPage'
 import LoginView from './components/auth/LoginView'
@@ -51,6 +52,7 @@ function PageContent() {
             <Route path="/instances" element={<InstancesPage />} />
             <Route path="/instances/:id" element={<InstanceDetailPage />} />
             <Route path="/skins" element={<SkinSelectorPage />} />
+            <Route path="/capes" element={<CapesPage />} />
             <Route path="/screenshots" element={<ScreenshotsPage />} />
             <Route path="/mods" element={<ModBrowserPage />} />
             <Route path="/mods/:source/:id" element={<ModDetailPage />} />

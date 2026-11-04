@@ -7,6 +7,9 @@ export interface MinecraftAccount {
   skinType?: 'default' | 'player' | 'custom'
   skinPlayerName?: string
   customSkinModel?: 'classic' | 'slim'
+  capeId?: string
+  capeUrl?: string
+  capeEnabled?: boolean
   accessToken: string
   refreshToken?: string
   xuid?: string

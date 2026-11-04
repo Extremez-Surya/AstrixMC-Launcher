@@ -24,11 +24,13 @@ import {
   HiSparkles,
   HiDocumentText,
   HiPaintBrush,
-  HiUser
+  HiUser,
+  HiCpuChip
 } from 'react-icons/hi2'
 import { FaShirt, FaDiscord } from 'react-icons/fa6'
 import AddAccountModal from '../components/onboarding/AddAccountModal'
 import CreateInstanceModal from '../components/instances/CreateInstanceModal'
+import NeuralAutoTunerModal from '../components/common/NeuralAutoTunerModal'
 import { MinecraftSkinViewer3D } from '../components/skins/MinecraftSkinViewer3D'
 import { useAuth } from '../hooks/useAuth'
 import { getAccountAvatar } from '../utils/avatar'
@@ -52,6 +54,7 @@ export default function HomePage() {
   const [skinKey, setSkinKey] = useState(0)
   const [skinZoom, setSkinZoom] = useState(1.0)
   const [skinAnimation, setSkinAnimation] = useState<'walk' | 'idle' | 'none'>('walk')
+  const [isNeuralTunerOpen, setIsNeuralTunerOpen] = useState(false)
 
   const currentInstance: GameInstance | undefined = activeInstance || instances[0]
 
@@ -208,6 +211,20 @@ export default function HomePage() {
             <span className="text-zinc-600">·</span>
             <span className="text-zinc-400">Ultra FPS Engine</span>
           </div>
+
+          {/* Neural Auto-Tuner Button */}
+          <button
+            type="button"
+            onClick={() => {
+              playSound('click')
+              setIsNeuralTunerOpen(true)
+            }}
+            title="Open Neural Auto-Tuner & Zero-Lag Profiler"
+            className="flex items-center gap-2 rounded-2xl border border-cyan-500/35 bg-cyan-950/30 hover:bg-cyan-900/40 px-3 py-2 text-[11px] font-bold text-cyan-300 backdrop-blur-xl shadow-[0_0_15px_rgba(6,182,212,0.15)] transition-all group"
+          >
+            <HiCpuChip className="h-4 w-4 text-cyan-400 group-hover:rotate-12 transition-transform" />
+            <span className="hidden sm:inline">Auto-Tuner</span>
+          </button>
         </div>
 
         {/* Right: Discord Quick Join + Account & Skins Pill */}
@@ -252,11 +269,21 @@ export default function HomePage() {
               {/* Skins Button Shortcut */}
               <button
                 onClick={() => navigate('/skins')}
-                title="Skin Wardrobe & Capes"
+                title="Skin Wardrobe"
                 className="flex items-center gap-1.5 rounded-xl bg-white/[0.06] hover:bg-amber-500/15 hover:text-amber-400 px-2.5 py-1 text-xs font-bold text-zinc-300 transition-colors"
               >
                 <FaShirt className="h-3 w-3" />
                 <span>Skins</span>
+              </button>
+
+              {/* Capes Button Shortcut */}
+              <button
+                onClick={() => navigate('/capes')}
+                title="Cape Studio & Cloth Physics"
+                className="flex items-center gap-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 px-2.5 py-1 text-xs font-bold transition-all"
+              >
+                <HiSparkles className="h-3 w-3 text-purple-400" />
+                <span>Capes</span>
               </button>
             </div>
           ) : (
@@ -312,17 +339,18 @@ export default function HomePage() {
             <MinecraftSkinViewer3D
               playerName={activeAccount?.skinPlayerName || activeAccount?.username || 'Steve'}
               skinUrl={activeAccount?.skinUrl}
+              capeUrl={activeAccount?.capeUrl}
               width={300}
               height={410}
               defaultAnimation={skinAnimation}
               enableControls={true}
               enableZoom={false}
               showControlsBar={false}
-              className="drop-shadow-[0_25px_40px_rgba(0,0,0,0.85)]"
+              className="drop-shadow-[0_25px_40px_rgba(0,0,0,0.85)] z-10"
             />
 
-            {/* Soft shadow at feet */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-6 w-44 rounded-[100%] bg-black/60 blur-md -z-10" />
+            {/* Soft subtle ground shadow */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-5 w-44 rounded-[100%] bg-black/50 blur-md pointer-events-none -z-10" />
           </div>
         </div>
 
@@ -749,6 +777,12 @@ export default function HomePage() {
           onClose={() => setIsAddAccountModalOpen(false)}
         />
       )}
+
+      {/* ── NEURAL AUTO-TUNER MODAL ── */}
+      <NeuralAutoTunerModal
+        isOpen={isNeuralTunerOpen}
+        onClose={() => setIsNeuralTunerOpen(false)}
+      />
     </div>
   )
 }

@@ -103,10 +103,19 @@ export function getRequiredJavaMajor(mcVersion: string): number {
   return 21
 }
 
+let cachedJavaInstallations: JavaInstallation[] | null = null
+let lastJavaScanTime = 0
+const JAVA_CACHE_TTL_MS = 3 * 60 * 1000 // 3 minutes
+
 /**
- * Searches the Windows filesystem and PATH for installed Java runtimes.
+ * Searches the Windows filesystem and PATH for installed Java runtimes with smart caching.
  */
-export function detectJavaInstallations(): JavaInstallation[] {
+export function detectJavaInstallations(forceRefresh = false): JavaInstallation[] {
+  const now = Date.now()
+  if (!forceRefresh && cachedJavaInstallations && (now - lastJavaScanTime) < JAVA_CACHE_TTL_MS) {
+    return cachedJavaInstallations
+  }
+
   const detectedPaths = new Set<string>()
   const results: JavaInstallation[] = []
 
@@ -219,6 +228,9 @@ export function detectJavaInstallations(): JavaInstallation[] {
     const bIsJavaw = b.path.toLowerCase().endsWith('javaw.exe') ? 1 : 0
     return bIsJavaw - aIsJavaw
   })
+
+  cachedJavaInstallations = results
+  lastJavaScanTime = Date.now()
 
   return results
 }
