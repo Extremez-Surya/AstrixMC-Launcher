@@ -14,6 +14,7 @@ import { getInstancesRoot, getLauncherRoot } from '../store'
 import { getInstance, updateInstance } from '../instances/instance-manager'
 import { prepareModLoader } from '../modloaders/loader-manager'
 import { discordRpcService } from '../discord-rpc'
+import { syncInGameSkin, getSkinAgentJvmArgs } from './skin-synchronizer'
 
 // Modern, ultra-smooth G1GC client optimization flags for high FPS without memory freeze
 const FPS_BOOST_JVM_ARGS = [
@@ -450,7 +451,6 @@ class LaunchEngine {
 
     // Auto-synchronize custom player skin into game instance (via CustomSkinLoader / internal skinpack)
     try {
-      const { syncInGameSkin, getSkinAgentJvmArgs } = await import('./skin-synchronizer')
       await syncInGameSkin(gameDirectory, account, modLoader, mcVersion)
       const agentArgs = getSkinAgentJvmArgs(modLoader)
       if (agentArgs && agentArgs.length > 0) {
