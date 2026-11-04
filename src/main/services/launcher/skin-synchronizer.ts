@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync, copyFileSync, unlinkSync, readFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, copyFileSync, unlinkSync, readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import https from 'https'
 import http from 'http'
@@ -358,6 +358,19 @@ export async function syncInGameSkin(
         mkdirSync(cslDir, { recursive: true })
       }
 
+      // Clear any outdated Mojang cache to avoid stale vanilla capes overriding custom capes
+      const cachesDir = join(cslDir, 'caches')
+      if (existsSync(cachesDir)) {
+        try {
+          const cachedFiles = readdirSync(cachesDir)
+          for (const f of cachedFiles) {
+            try {
+              unlinkSync(join(cachesDir, f))
+            } catch {}
+          }
+        } catch {}
+      }
+
       const cslConfigFile = join(cslDir, 'CustomSkinLoader.json')
       const cslConfig = {
         version: '15.1',
@@ -369,6 +382,20 @@ export async function syncInGameSkin(
             type: 'Legacy',
             skin: 'LocalSkin/skins/{USERNAME}.png',
             cape: 'LocalSkin/capes/{USERNAME}.png',
+            model: 'auto'
+          },
+          {
+            name: 'AstrixGlobalCDN',
+            type: 'Legacy',
+            skin: 'https://cdn.jsdelivr.net/gh/Extremez-Surya/AstrixMC-Launcher@cdn/skins/{USERNAME}.png',
+            cape: 'https://cdn.jsdelivr.net/gh/Extremez-Surya/AstrixMC-Launcher@cdn/capes/{USERNAME}.png',
+            model: 'auto'
+          },
+          {
+            name: 'AstrixRawCDN',
+            type: 'Legacy',
+            skin: 'https://raw.githubusercontent.com/Extremez-Surya/AstrixMC-Launcher/cdn/skins/{USERNAME}.png',
+            cape: 'https://raw.githubusercontent.com/Extremez-Surya/AstrixMC-Launcher/cdn/capes/{USERNAME}.png',
             model: 'auto'
           },
           {
@@ -389,13 +416,13 @@ export async function syncInGameSkin(
         enableTransparentSkin: false,
         forceLoadAllTextures: false,
         enableCape: true,
-        threadPoolSize: 4,
+        threadPoolSize: 1,
         enableLogStdOut: false,
         cacheExpiry: 30,
         forceUpdateSkull: false,
         enableLocalProfileCache: false,
         enableCacheAutoClean: true,
-        forceDisableCache: false
+        forceDisableCache: true
       }
 
       try {
