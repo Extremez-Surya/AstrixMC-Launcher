@@ -486,6 +486,21 @@ class LaunchEngine {
       customArgs.push(...config.extraJvmArgs.split(' ').filter(Boolean))
     }
 
+    // Sanitize JVM arguments: eliminate conflicting garbage collectors and deprecated options for modern Java (Java 21-26+)
+    const cleanedArgs: string[] = []
+    const seenArgs = new Set<string>()
+    for (const arg of customArgs) {
+      if (arg.includes('ZGenerational')) continue
+      if (arg.includes('UseZGC') || arg.includes('UseParallelGC') || arg.includes('UseSerialGC')) continue
+
+      const key = arg.includes('=') ? arg.split('=')[0] : arg
+      if (!seenArgs.has(key) || key.startsWith('-D') || key.startsWith('--add-opens')) {
+        seenArgs.add(key)
+        cleanedArgs.push(arg)
+      }
+    }
+    customArgs = cleanedArgs
+
     // Notify UI
     this.sendProgress({
       stage: 'preparing',

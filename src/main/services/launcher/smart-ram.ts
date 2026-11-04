@@ -60,32 +60,18 @@ export function computeSmartRam(
     '-XX:MaxMetaspaceSize=512M',
     // Bound direct NIO buffers for LWJGL/OpenGL/Vulkan shaders
     '-XX:MaxDirectMemorySize=1536M',
-    '-XX:+UnlockDiagnosticVMOptions'
-  ]
-
-  // Modern Low-Latency Garbage Collection:
-  // On Java 21+ with >= 8GB RAM, Generational ZGC delivers sub-millisecond GC pauses
-  if (javaMajor >= 21 && totalSystemGb >= 8) {
-    jvmArgs.push(
-      '-XX:+UseZGC',
-      '-XX:+ZGenerational'
-    )
-  } else {
-    // Highly optimized G1GC bounds for smooth 144+ FPS without frame hiccups
-    jvmArgs.push(
-      '-XX:+UseG1GC',
-      '-XX:G1NewSizePercent=20',
-      '-XX:G1ReservePercent=20',
-      '-XX:MaxGCPauseMillis=40',
-      '-XX:G1HeapRegionSize=32M'
-    )
-  }
-
-  // Native String deduplication & optimization
-  jvmArgs.push(
+    '-XX:+UnlockDiagnosticVMOptions',
+    '-XX:+UnlockExperimentalVMOptions',
+    // Universal low-latency G1GC (100% compatible with all Java 8-26 runtimes & modloaders)
+    '-XX:+UseG1GC',
+    '-XX:G1NewSizePercent=20',
+    '-XX:G1ReservePercent=15',
+    '-XX:MaxGCPauseMillis=50',
+    '-XX:+ParallelRefProcEnabled',
+    '-XX:+AlwaysPreTouch',
     '-XX:+OptimizeStringConcat',
     '-XX:+UseStringDeduplication'
-  )
+  ]
 
   return {
     totalSystemGb,
