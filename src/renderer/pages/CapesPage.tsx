@@ -11,8 +11,7 @@ import {
   HiChevronLeft,
   HiChevronRight,
   HiMagnifyingGlass,
-  HiUser,
-  HiCheckCircle
+  HiUser
 } from 'react-icons/hi2'
 import { useAuth } from '../hooks/useAuth'
 import { useAuthStore } from '../stores/auth-store'
@@ -23,13 +22,13 @@ import { WORLDWIDE_CAPES, CapeItem, generatePersonalizedPlayerCape } from '../ut
 
 /**
  * High-fidelity 2.5D Steve-with-Cape back view canvas component.
- * Renders Steve from the back with the cape cleanly overlaid.
+ * Supports live dynamic multi-frame animation for animated capes.
  */
-function SteveBackCapeCanvas({ textureUrl }: { textureUrl: string }) {
+function SteveBackCapeCanvas({ cape, frame = 0 }: { cape: CapeItem; frame?: number }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
-    if (!canvasRef.current || !textureUrl) return
+    if (!canvasRef.current) return
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -92,8 +91,8 @@ function SteveBackCapeCanvas({ textureUrl }: { textureUrl: string }) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
       ctx.fillRect(34, 37, 32, 3)
     }
-    img.src = textureUrl
-  }, [textureUrl])
+    img.src = cape.getTexture(frame)
+  }, [cape, frame])
 
   return (
     <canvas
@@ -112,11 +111,12 @@ export default function CapesPage() {
   const { activeAccount } = useAuth()
   const { updateAccount } = useAuthStore()
 
-  const [activeTab, setActiveTab] = useState<'all' | 'trending' | 'official' | 'anime' | 'pvp' | 'astrix' | 'nickname' | 'custom'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'animated' | 'official' | 'trending' | 'community' | 'nickname' | 'custom'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [globalFrame, setGlobalFrame] = useState(0)
 
-  const [selectedCapeId, setSelectedCapeId] = useState<string | null>(activeAccount?.capeId || 'cape-cyan-diamond')
+  const [selectedCapeId, setSelectedCapeId] = useState<string | null>(activeAccount?.capeId || WORLDWIDE_CAPES[0].id)
   const [previewCapeUrl, setPreviewCapeUrl] = useState<string | null>(activeAccount?.capeUrl || null)
   const [customCapeDataUri, setCustomCapeDataUri] = useState<string | null>(null)
   const [customCapeName, setCustomCapeName] = useState<string>('Custom Cape')
@@ -129,6 +129,14 @@ export default function CapesPage() {
   const [isSearchingNickname, setIsSearchingNickname] = useState(false)
   const [nicknameResult, setNicknameResult] = useState<{ url: string; source: string; name: string } | null>(null)
 
+  // Global Animation Ticker for Animated Capes
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setGlobalFrame((f) => (f + 1) % 24)
+    }, 140)
+    return () => clearInterval(timer)
+  }, [])
+
   // Initialize preview with active account cape or first cape
   useEffect(() => {
     if (activeAccount?.capeUrl) {
@@ -138,15 +146,28 @@ export default function CapesPage() {
       const defaultCape = WORLDWIDE_CAPES[0]
       if (defaultCape) {
         setSelectedCapeId(defaultCape.id)
-        setPreviewCapeUrl(defaultCape.generateTexture())
+        setPreviewCapeUrl(defaultCape.getTexture(0))
       }
     }
   }, [activeAccount?.id])
 
+  // If the currently selected cape is animated, update preview on each tick
+  const currentCapeItem = useMemo(() => {
+    return WORLDWIDE_CAPES.find((c) => c.id === selectedCapeId)
+  }, [selectedCapeId])
+
+  useEffect(() => {
+    if (currentCapeItem?.isAnimated) {
+      setPreviewCapeUrl(currentCapeItem.getTexture(globalFrame))
+    }
+  }, [globalFrame, currentCapeItem])
+
   // Filtered capes
   const filteredCapes = useMemo(() => {
     let list = WORLDWIDE_CAPES
-    if (activeTab !== 'all') {
+    if (activeTab === 'animated') {
+      list = WORLDWIDE_CAPES.filter((c) => c.isAnimated)
+    } else if (activeTab !== 'all') {
       list = WORLDWIDE_CAPES.filter((c) => c.category === activeTab)
     }
 
@@ -173,8 +194,7 @@ export default function CapesPage() {
   const handleSelectCuratedCape = (cape: CapeItem) => {
     playSound('click')
     setSelectedCapeId(cape.id)
-    const texture = cape.generateTexture()
-    setPreviewCapeUrl(texture)
+    setPreviewCapeUrl(cape.getTexture(globalFrame))
   }
 
   // Live Player Cape Lookup with Guaranteed Fallback
@@ -188,9 +208,9 @@ export default function CapesPage() {
       let capeUrl: string | null = null
       let sourceName = 'Worldwide Cape Network'
 
-      // Special case: Notch
+      // Special case: Notch (Notch's classic Crimson Mojang cape)
       if (name.toLowerCase() === 'notch') {
-        const notchCape = WORLDWIDE_CAPES.find((c) => c.id === 'optifine-crimson')?.generateTexture() || generatePersonalizedPlayerCape('Notch')
+        const notchCape = WORLDWIDE_CAPES.find((c) => c.id === 'trend-optifine-crimson')?.getTexture(0) || generatePersonalizedPlayerCape('Notch')
         setNicknameResult({ url: notchCape, source: 'Mojang Creator Network', name: "Notch's Classic Cape" })
         setPreviewCapeUrl(notchCape)
         setSelectedCapeId(`player-notch`)
@@ -363,21 +383,21 @@ export default function CapesPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
-              <span>Cape Studio & Cloaks</span>
+              <span>Cape Studio & Physics</span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-widest uppercase bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                WORLDWIDE CAPE LIBRARY
+                WAVEY CLOTH ENGINE
               </span>
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Browse, equip, and search thousands of worldwide capes with real waving cloth physics simulation.
+            Official Mojang CDN, animated multi-frame cloaks, and community capes with waving cloth physics simulation.
           </p>
         </div>
 
         {/* Cloth Physics Status Pill */}
         <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs shadow-inner">
           <HiBolt className="h-4 w-4 text-cyan-400 animate-pulse" />
-          <span className="font-semibold text-[11px]">Real Cloth Physics: ACTIVE</span>
+          <span className="font-semibold text-[11px]">Cloth Physics: ACTIVE</span>
         </div>
       </div>
 
@@ -470,15 +490,14 @@ export default function CapesPage() {
           {/* Top Category Tabs & Search HUD */}
           <div className="flex flex-col gap-3 pb-4 border-b border-white/[0.06]">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {/* Clean Astrix Category Filters (No competitor names) */}
+              {/* Category Filters with Clear Separation of Animated & Official */}
               <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.08] overflow-x-auto max-w-full">
                 {[
                   { id: 'all', label: `All Capes (${WORLDWIDE_CAPES.length})` },
-                  { id: 'trending', label: 'Trending' },
-                  { id: 'official', label: 'Official & Minecon' },
-                  { id: 'anime', label: 'Anime & Gaming' },
-                  { id: 'pvp', label: 'PvP & Neon' },
-                  { id: 'astrix', label: 'Astrix Signature' },
+                  { id: 'animated', label: `Live Animated (${WORLDWIDE_CAPES.filter((c) => c.isAnimated).length})` },
+                  { id: 'official', label: `Official Mojang (${WORLDWIDE_CAPES.filter((c) => c.category === 'official').length})` },
+                  { id: 'trending', label: `Trending & PvP (${WORLDWIDE_CAPES.filter((c) => c.category === 'trending').length})` },
+                  { id: 'community', label: `Anime & Gaming (${WORLDWIDE_CAPES.filter((c) => c.category === 'community').length})` },
                   { id: 'nickname', label: 'By Player' },
                   { id: 'custom', label: 'Custom Upload' }
                 ].map((tab) => (
@@ -592,7 +611,15 @@ export default function CapesPage() {
                 {nicknameResult && (
                   <div className="mt-6 flex items-center justify-between w-full p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30">
                     <div className="flex items-center gap-3">
-                      <SteveBackCapeCanvas textureUrl={nicknameResult.url} />
+                      <SteveBackCapeCanvas
+                        cape={{
+                          id: 'nickname-preview',
+                          name: nicknameResult.name,
+                          description: nicknameResult.source,
+                          category: 'official',
+                          getTexture: () => nicknameResult.url
+                        }}
+                      />
                       <div className="text-left">
                         <h4 className="text-sm font-bold text-white">{nicknameResult.name}</h4>
                         <span className="text-[11px] text-cyan-400 font-semibold">{nicknameResult.source}</span>
@@ -645,7 +672,15 @@ export default function CapesPage() {
 
               {customCapeDataUri && (
                 <div className="mt-6 flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/10">
-                  <SteveBackCapeCanvas textureUrl={customCapeDataUri} />
+                  <SteveBackCapeCanvas
+                    cape={{
+                      id: 'custom-preview',
+                      name: customCapeName,
+                      description: 'Custom Cape',
+                      category: 'community',
+                      getTexture: () => customCapeDataUri
+                    }}
+                  />
                   <div>
                     <h4 className="text-sm font-bold text-white">{customCapeName}</h4>
                     <p className="text-xs text-emerald-400 font-semibold">Custom Cape Ready to Equip</p>
@@ -672,7 +707,6 @@ export default function CapesPage() {
               {paginatedCapes.map((cape) => {
                 const isSelected = selectedCapeId === cape.id
                 const isEquipped = activeAccount?.capeId === cape.id
-                const textureUrl = cape.generateTexture()
 
                 return (
                   <motion.div
@@ -689,8 +723,15 @@ export default function CapesPage() {
                   >
                     {/* Top Row: Badge & Status */}
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 uppercase tracking-wider">
-                        {cape.badge || cape.category}
+                      <span className={cn(
+                        'text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider',
+                        cape.isAnimated
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                          : cape.category === 'official'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-white/10 text-slate-300'
+                      )}>
+                        {cape.badge || (cape.isAnimated ? 'ANIMATED' : 'CLASSIC')}
                       </span>
                       {isEquipped && (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
@@ -699,13 +740,16 @@ export default function CapesPage() {
                       )}
                     </div>
 
-                    {/* Visual Card: Steve from the BACK wearing the cape */}
+                    {/* Visual Card: Steve from the BACK wearing the cape (Cycles frames if animated!) */}
                     <div className="h-36 w-full rounded-xl flex items-center justify-center bg-black/40 border border-white/[0.06] mb-2.5 relative overflow-hidden group-hover:border-white/15 transition-all">
-                      <SteveBackCapeCanvas textureUrl={textureUrl} />
+                      <SteveBackCapeCanvas
+                        cape={cape}
+                        frame={cape.isAnimated ? globalFrame : 0}
+                      />
 
                       {cape.isAnimated && (
-                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-purple-500/30 border border-purple-400/40 text-[8.5px] font-mono text-purple-200">
-                          ANIMATED
+                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-purple-500/30 border border-purple-400/40 text-[8.5px] font-mono text-purple-200 animate-pulse">
+                          LIVE ANIMATED
                         </span>
                       )}
                     </div>
