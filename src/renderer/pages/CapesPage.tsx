@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   HiSparkles,
@@ -7,30 +7,27 @@ import {
   HiArrowUpTray,
   HiBolt,
   HiShieldCheck,
-  HiHeart,
-  HiChevronLeft,
-  HiChevronRight,
-  HiMagnifyingGlass,
   HiUser,
-  HiFire,
-  HiArrowPath
+  HiMagnifyingGlass
 } from 'react-icons/hi2'
 import { useAuth } from '../hooks/useAuth'
 import { useAuthStore } from '../stores/auth-store'
 import { playSound } from '../utils/sound'
 import { cn } from '../lib/cn'
 import { MinecraftSkinViewer3D } from '../components/skins/MinecraftSkinViewer3D'
-import { WORLDWIDE_CAPES, CapeItem, generatePersonalizedPlayerCape } from '../utils/capes-library'
+import {
+  KNOWN_PLAYER_CAPES,
+  generatePersonalizedPlayerCape
+} from '../utils/capes-library'
 
 /**
- * High-fidelity 2.5D Steve-with-Cape back view canvas component.
- * Supports live dynamic multi-frame animation for animated capes.
+ * 2.5D Steve-with-Cape back view canvas component.
  */
-function SteveBackCapeCanvas({ cape, frame = 0 }: { cape: CapeItem; frame?: number }) {
+function SteveBackCapeCanvas({ textureUrl }: { textureUrl: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
-    if (!canvasRef.current) return
+    if (!canvasRef.current || !textureUrl) return
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -93,8 +90,8 @@ function SteveBackCapeCanvas({ cape, frame = 0 }: { cape: CapeItem; frame?: numb
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
       ctx.fillRect(34, 37, 32, 3)
     }
-    img.src = cape.getTexture(frame)
-  }, [cape, frame])
+    img.src = textureUrl
+  }, [textureUrl])
 
   return (
     <canvas
@@ -107,135 +104,70 @@ function SteveBackCapeCanvas({ cape, frame = 0 }: { cape: CapeItem; frame?: numb
   )
 }
 
-const ITEMS_PER_PAGE = 8
-
 export default function CapesPage() {
   const { activeAccount } = useAuth()
   const { updateAccount } = useAuthStore()
 
-  const [activeTab, setActiveTab] = useState<'all' | 'animated' | 'official' | 'trending' | 'community' | 'nickname' | 'custom'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [globalFrame, setGlobalFrame] = useState(0)
-  const [sortBy, setSortBy] = useState<'featured' | 'popular' | 'random'>('featured')
-  const [randomSeed, setRandomSeed] = useState(0)
+  // Only 2 options: 'by-player' and 'upload'
+  const [activeTab, setActiveTab] = useState<'by-player' | 'upload'>('by-player')
 
-  const [selectedCapeId, setSelectedCapeId] = useState<string | null>(activeAccount?.capeId || WORLDWIDE_CAPES[0].id)
+  const [selectedCapeId, setSelectedCapeId] = useState<string | null>(activeAccount?.capeId || null)
   const [previewCapeUrl, setPreviewCapeUrl] = useState<string | null>(activeAccount?.capeUrl || null)
-  const [customCapeDataUri, setCustomCapeDataUri] = useState<string | null>(null)
-  const [customCapeName, setCustomCapeName] = useState<string>('Custom Cape')
   const [isEquipping, setIsEquipping] = useState(false)
   const [notification, setNotification] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Nickname Live Search State
-  const [nicknameInput, setNicknameInput] = useState('')
-  const [isSearchingNickname, setIsSearchingNickname] = useState(false)
-  const [nicknameResult, setNicknameResult] = useState<{ url: string; source: string; name: string } | null>(null)
+  // By Player state
+  const [playerInput, setPlayerInput] = useState('')
+  const [isSearchingPlayer, setIsSearchingPlayer] = useState(false)
+  const [playerResult, setPlayerResult] = useState<{ url: string; source: string; name: string } | null>(null)
 
-  // Global Animation Ticker for Animated Capes
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setGlobalFrame((f) => (f + 1) % 24)
-    }, 140)
-    return () => clearInterval(timer)
-  }, [])
+  // Upload state
+  const [customCapeDataUri, setCustomCapeDataUri] = useState<string | null>(null)
+  const [customCapeName, setCustomCapeName] = useState<string>('Custom Cape')
 
-  // Initialize preview with active account cape or first cape
+  // Initialize preview with active account cape
   useEffect(() => {
     if (activeAccount?.capeUrl) {
       setPreviewCapeUrl(activeAccount.capeUrl)
-      setSelectedCapeId(activeAccount.capeId || 'custom')
-    } else {
-      const defaultCape = WORLDWIDE_CAPES[0]
-      if (defaultCape) {
-        setSelectedCapeId(defaultCape.id)
-        setPreviewCapeUrl(defaultCape.getTexture(0))
-      }
+      setSelectedCapeId(activeAccount.capeId || 'equipped')
     }
-  }, [activeAccount?.id])
+  }, [activeAccount?.id, activeAccount?.capeUrl])
 
-  // If the currently selected cape is animated, update preview on each tick
-  const currentCapeItem = useMemo(() => {
-    return WORLDWIDE_CAPES.find((c) => c.id === selectedCapeId)
-  }, [selectedCapeId])
-
-  useEffect(() => {
-    if (currentCapeItem?.isAnimated) {
-      setPreviewCapeUrl(currentCapeItem.getTexture(globalFrame))
-    }
-  }, [globalFrame, currentCapeItem])
-
-  // Filtered and sorted capes
-  const filteredCapes = useMemo(() => {
-    let list = WORLDWIDE_CAPES
-    if (activeTab === 'animated') {
-      list = WORLDWIDE_CAPES.filter((c) => c.isAnimated)
-    } else if (activeTab !== 'all') {
-      list = WORLDWIDE_CAPES.filter((c) => c.category === activeTab)
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || (c.badge && c.badge.toLowerCase().includes(q)))
-    }
-
-    if (sortBy === 'popular') {
-      list = [...list].sort((a, b) => (b.likes || 0) - (a.likes || 0))
-    } else if (sortBy === 'random') {
-      list = [...list].sort((a, b) => {
-        const hashA = (a.id + randomSeed).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-        const hashB = (b.id + randomSeed).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-        return (hashA % 100) - (hashB % 100)
-      })
-    }
-
-    return list
-  }, [activeTab, searchQuery, sortBy, randomSeed])
-
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredCapes.length / ITEMS_PER_PAGE))
-  const paginatedCapes = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredCapes.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredCapes, currentPage])
-
-  // Reset page on tab/search change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [activeTab, searchQuery])
-
-  const handleSelectCuratedCape = (cape: CapeItem) => {
-    playSound('click')
-    setSelectedCapeId(cape.id)
-    setPreviewCapeUrl(cape.getTexture(globalFrame))
+  const showToast = (msg: string) => {
+    setNotification(msg)
+    setTimeout(() => setNotification(null), 3500)
   }
 
-  // Live Player Cape Lookup with Guaranteed Fallback
-  const handleLookupNicknameCape = async () => {
-    if (!nicknameInput.trim()) return
-    const name = nicknameInput.trim()
-    setIsSearchingNickname(true)
+  // Lookup player cape
+  const handleLookupPlayerCape = async (overrideName?: string) => {
+    const rawName = (overrideName || playerInput).trim()
+    if (!rawName) return
+
+    setPlayerInput(rawName)
+    setIsSearchingPlayer(true)
     playSound('click')
 
+    const lower = rawName.toLowerCase()
+
+    // 1. Check known player dictionary (e.g. Notch, Jeb_, Dinnerbone)
+    if (KNOWN_PLAYER_CAPES[lower]) {
+      const known = KNOWN_PLAYER_CAPES[lower]
+      setPlayerResult(known)
+      setPreviewCapeUrl(known.url)
+      setSelectedCapeId(`player-${lower}`)
+      showToast(`Found ${known.name}!`)
+      setIsSearchingPlayer(false)
+      return
+    }
+
     try {
-      let capeUrl: string | null = null
-      let sourceName = 'Worldwide Cape Network'
+      let foundUrl: string | null = null
+      let foundSource = 'Official Minecraft Network'
 
-      // Special case: Notch (Notch's classic Crimson Mojang cape)
-      if (name.toLowerCase() === 'notch') {
-        const notchCape = WORLDWIDE_CAPES.find((c) => c.id === 'trend-optifine-crimson')?.getTexture(0) || generatePersonalizedPlayerCape('Notch')
-        setNicknameResult({ url: notchCape, source: 'Mojang Creator Network', name: "Notch's Classic Cape" })
-        setPreviewCapeUrl(notchCape)
-        setSelectedCapeId(`player-notch`)
-        showToast("Found Notch's Classic Cape!")
-        setIsSearchingNickname(false)
-        return
-      }
-
-      // Try Mojang Session API
+      // 2. Fetch Mojang profile & session
       try {
-        const profileRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(name)}`)
+        const profileRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(rawName)}`)
         if (profileRes.ok) {
           const profileData = await profileRes.json()
           if (profileData?.id) {
@@ -246,38 +178,49 @@ export default function CapesPage() {
               if (prop?.value) {
                 const decoded = JSON.parse(atob(prop.value))
                 if (decoded.textures?.CAPE?.url) {
-                  capeUrl = decoded.textures.CAPE.url
-                  sourceName = 'Official Mojang Network'
+                  foundUrl = decoded.textures.CAPE.url
+                  foundSource = 'Official Mojang Cape'
                 }
               }
             }
           }
         }
       } catch {
-        // network issue fallback
+        // network issue
       }
 
-      // If player doesn't have an official session cape, generate an authentic personalized player cape
-      if (!capeUrl) {
-        capeUrl = generatePersonalizedPlayerCape(name)
-        sourceName = 'Personalized Player Cape'
+      // 3. Fallback: Generate dedicated player cape
+      if (!foundUrl) {
+        foundUrl = generatePersonalizedPlayerCape(rawName)
+        foundSource = 'Personalized Player Cape'
       }
 
-      setNicknameResult({ url: capeUrl, source: sourceName, name: `${name}'s Exclusive Cape` })
-      setPreviewCapeUrl(capeUrl)
-      setSelectedCapeId(`player-${name}`)
-      showToast(`Cape ready for "${name}"!`)
+      const result = {
+        url: foundUrl,
+        source: foundSource,
+        name: `${rawName}'s Cape`
+      }
+      setPlayerResult(result)
+      setPreviewCapeUrl(foundUrl)
+      setSelectedCapeId(`player-${lower}`)
+      showToast(`Cape ready for "${rawName}"!`)
     } catch {
-      const fallbackUrl = generatePersonalizedPlayerCape(name)
-      setNicknameResult({ url: fallbackUrl, source: 'Player Cape Studio', name: `${name}'s Cape` })
+      const fallbackUrl = generatePersonalizedPlayerCape(rawName)
+      const result = {
+        url: fallbackUrl,
+        source: 'Player Cape Studio',
+        name: `${rawName}'s Cape`
+      }
+      setPlayerResult(result)
       setPreviewCapeUrl(fallbackUrl)
-      setSelectedCapeId(`player-${name}`)
-      showToast(`Cape ready for "${name}"!`)
+      setSelectedCapeId(`player-${lower}`)
+      showToast(`Cape ready for "${rawName}"!`)
     } finally {
-      setIsSearchingNickname(false)
+      setIsSearchingPlayer(false)
     }
   }
 
+  // Upload Custom File
   const handleCustomFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -304,18 +247,13 @@ export default function CapesPage() {
         setCustomCapeName(file.name.replace(/\.[^/.]+$/, ''))
         setSelectedCapeId('custom')
         setPreviewCapeUrl(dataUri)
-        setActiveTab('custom')
       }
       img.src = dataUri
     }
     reader.readAsDataURL(file)
   }
 
-  const showToast = (msg: string) => {
-    setNotification(msg)
-    setTimeout(() => setNotification(null), 3500)
-  }
-
+  // Equip Cape
   const handleEquipCape = async () => {
     if (!activeAccount) {
       showToast('Please sign in or select an account first!')
@@ -345,6 +283,7 @@ export default function CapesPage() {
     }
   }
 
+  // Unequip Cape
   const handleUnequipCape = async () => {
     if (!activeAccount) return
     setIsEquipping(true)
@@ -404,7 +343,7 @@ export default function CapesPage() {
             </h1>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Official Mojang CDN, animated multi-frame cloaks, and community capes with waving cloth physics simulation.
+            Equip custom capes or import from player usernames with realistic waving cloth physics simulation.
           </p>
         </div>
 
@@ -415,9 +354,9 @@ export default function CapesPage() {
         </div>
       </div>
 
-      {/* Main Content: Split 3D Stage & Cape Catalog */}
+      {/* Main Content Split: Left 3D Stage | Right Controls */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Side: 3D Stage (Camera starts in Back View so cape is immediately visible) */}
+        {/* Left Side: 3D Stage (Camera starts in Back View so cape is visible) */}
         <div className="w-[340px] lg:w-[380px] p-6 flex flex-col items-center justify-between border-r border-white/[0.06] bg-[#070A14]/70 relative shrink-0">
           {/* Active Account Identity Pill */}
           <div className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
@@ -431,14 +370,16 @@ export default function CapesPage() {
               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
                 <HiShieldCheck className="h-3.5 w-3.5" /> Equipped In-Game
               </span>
-            ) : (
+            ) : previewCapeUrl ? (
               <span className="text-[11px] text-amber-400 font-medium">Cape Selected</span>
+            ) : (
+              <span className="text-[11px] text-slate-500 font-medium">No Cape</span>
             )}
           </div>
 
           {/* 3D Skin & Cape Stage */}
           <div className="relative my-auto flex flex-col items-center justify-center">
-            {/* Natural soft ground shadow (No artificial borders) */}
+            {/* Natural soft ground shadow */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 h-5 w-40 rounded-[100%] bg-black/50 blur-md pointer-events-none -z-10" />
 
             <MinecraftSkinViewer3D
@@ -466,7 +407,7 @@ export default function CapesPage() {
                   'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg',
                   isCurrentEquipped
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 cursor-default'
-                    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98]'
+                    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-black shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed'
                 )}
               >
                 {isCurrentEquipped ? (
@@ -494,211 +435,142 @@ export default function CapesPage() {
             </div>
 
             <p className="text-[10px] text-center text-slate-400">
-              * Click the flip button in 3D bar to view front or back side.
+              * Click the 3D flip button below player to view front or back side.
             </p>
           </div>
         </div>
 
-        {/* Right Side: Cape Catalog, Filters, Search & Nickname Live Lookup */}
-        <div className="flex-1 p-6 flex flex-col overflow-y-auto">
-          {/* Top Category Tabs & Search HUD */}
-          <div className="flex flex-col gap-3 pb-4 border-b border-white/[0.06]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              {/* Category Filters with Clear Separation of Animated & Official */}
-              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.08] overflow-x-auto max-w-full">
-                {[
-                  { id: 'all', label: `All Capes (${WORLDWIDE_CAPES.length})` },
-                  { id: 'animated', label: `Live Animated (${WORLDWIDE_CAPES.filter((c) => c.isAnimated).length})` },
-                  { id: 'official', label: `Official Mojang (${WORLDWIDE_CAPES.filter((c) => c.category === 'official').length})` },
-                  { id: 'trending', label: `Trending & PvP (${WORLDWIDE_CAPES.filter((c) => c.category === 'trending').length})` },
-                  { id: 'community', label: `Anime & Gaming (${WORLDWIDE_CAPES.filter((c) => c.category === 'community').length})` },
-                  { id: 'nickname', label: 'By Player' },
-                  { id: 'custom', label: 'Custom Upload' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      playSound('click')
-                      setActiveTab(tab.id as any)
-                    }}
-                    className={cn(
-                      'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap',
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+        {/* Right Side: ONLY 2 Options - By Player & Upload */}
+        <div className="flex-1 p-8 flex flex-col overflow-y-auto">
+          {/* Top 2 Option Tab Toggle */}
+          <div className="flex items-center justify-center pb-6 border-b border-white/[0.06]">
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click')
+                  setActiveTab('by-player')
+                }}
+                className={cn(
+                  'flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-wider',
+                  activeTab === 'by-player'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                )}
+              >
+                <HiUser className="h-4 w-4" />
+                By Player
+              </button>
 
-              {/* Discovery Modes & Search Bar */}
-              {activeTab !== 'nickname' && activeTab !== 'custom' && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center p-0.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click')
-                        setSortBy('popular')
-                      }}
-                      className={cn(
-                        'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all',
-                        sortBy === 'popular'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      )}
-                      title="Sort by worldwide popularity"
-                    >
-                      <HiFire className="h-3.5 w-3.5 text-amber-400" />
-                      Popular
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click')
-                        setSortBy('random')
-                        setRandomSeed((s) => s + 1)
-                      }}
-                      className={cn(
-                        'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all',
-                        sortBy === 'random'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                      )}
-                      title="Discover random worldwide capes"
-                    >
-                      <HiArrowPath className="h-3.5 w-3.5 text-purple-400" />
-                      Random
-                    </button>
-                  </div>
-
-                  <div className="relative flex items-center">
-                    <HiMagnifyingGlass className="absolute left-3 h-4 w-4 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search cape name..."
-                      className="w-44 pl-9 pr-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition-colors"
-                    />
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click')
+                  setActiveTab('upload')
+                }}
+                className={cn(
+                  'flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-wider',
+                  activeTab === 'upload'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                )}
+              >
+                <HiArrowUpTray className="h-4 w-4" />
+                Upload Cape (.PNG)
+              </button>
             </div>
-
-            {/* Pagination HUD */}
-            {activeTab !== 'nickname' && activeTab !== 'custom' && totalPages > 1 && (
-              <div className="flex items-center justify-between pt-1 text-xs">
-                <span className="text-slate-400 text-[11px]">
-                  Showing {paginatedCapes.length} of {filteredCapes.length} capes
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click')
-                      setCurrentPage((p) => Math.max(1, p - 1))
-                    }}
-                    disabled={currentPage === 1}
-                    className="flex items-center justify-center h-7 w-7 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none text-slate-300"
-                  >
-                    <HiChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  <span className="px-2.5 py-0.5 rounded-md bg-white/5 text-[11px] font-mono text-purple-300 font-bold border border-white/10">
-                    Page {currentPage} of {totalPages}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playSound('click')
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center justify-center h-7 w-7 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none text-slate-300"
-                  >
-                    <HiChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* TAB 1: By Player Live Lookup (Guaranteed Cape Result for ANY Player) */}
-          {activeTab === 'nickname' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full">
+          {/* Option 1: By Player Username */}
+          {activeTab === 'by-player' && (
+            <div className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full py-6">
               <div className="p-8 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl w-full flex flex-col items-center text-center shadow-2xl">
-                <div className="h-14 w-14 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4 border border-cyan-500/30">
-                  <HiUser className="h-7 w-7" />
+                <div className="h-16 w-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4 border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
+                  <HiUser className="h-8 w-8" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">
-                  Fetch Capes by Player Username
+                <h3 className="text-lg font-bold text-white mb-1.5">
+                  Fetch Cape by Minecraft Username
                 </h3>
-                <p className="text-xs text-slate-400 mb-6 max-w-sm">
-                  Enter any Minecraft username (e.g. Notch, Dream, surya, Alex). The network will retrieve or generate their exclusive cape.
+                <p className="text-xs text-slate-400 mb-6 max-w-md leading-relaxed">
+                  Enter any player username to retrieve their official Mojang cape or player cloak.
                 </p>
 
-                <div className="flex gap-2 w-full max-w-md">
-                  <input
-                    type="text"
-                    value={nicknameInput}
-                    onChange={(e) => setNicknameInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLookupNicknameCape()}
-                    placeholder="e.g. Notch, Dream, surya..."
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                  />
+                {/* Search Bar Input */}
+                <div className="flex gap-2.5 w-full max-w-md">
+                  <div className="relative flex-1">
+                    <HiMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={playerInput}
+                      onChange={(e) => setPlayerInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleLookupPlayerCape()}
+                      placeholder="Enter username (e.g. Notch, Dream)..."
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+                    />
+                  </div>
                   <button
                     type="button"
-                    onClick={handleLookupNicknameCape}
-                    disabled={isSearchingNickname || !nicknameInput.trim()}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                    onClick={() => handleLookupPlayerCape()}
+                    disabled={isSearchingPlayer || !playerInput.trim()}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg shadow-cyan-500/20"
                   >
-                    {isSearchingNickname ? 'Searching...' : 'Search'}
+                    {isSearchingPlayer ? 'Searching...' : 'Search'}
                   </button>
                 </div>
 
-                {nicknameResult && (
-                  <div className="mt-6 flex items-center justify-between w-full p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30">
-                    <div className="flex items-center gap-3">
-                      <SteveBackCapeCanvas
-                        cape={{
-                          id: 'nickname-preview',
-                          name: nicknameResult.name,
-                          description: nicknameResult.source,
-                          category: 'official',
-                          getTexture: () => nicknameResult.url
-                        }}
-                      />
+                {/* Popular Quick-Select Suggestions */}
+                <div className="flex items-center flex-wrap justify-center gap-2 mt-4">
+                  <span className="text-[11px] text-slate-500 font-medium">Quick search:</span>
+                  {['Notch', 'Jeb_', 'Dinnerbone', 'Dream', 'Technoblade'].map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => handleLookupPlayerCape(name)}
+                      className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-cyan-500/20 hover:text-cyan-300 border border-white/10 text-[11px] text-slate-300 font-mono transition-colors"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search Result Card */}
+                {playerResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 flex items-center justify-between w-full p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 shadow-xl"
+                  >
+                    <div className="flex items-center gap-4">
+                      <SteveBackCapeCanvas textureUrl={playerResult.url} />
                       <div className="text-left">
-                        <h4 className="text-sm font-bold text-white">{nicknameResult.name}</h4>
-                        <span className="text-[11px] text-cyan-400 font-semibold">{nicknameResult.source}</span>
+                        <h4 className="text-sm font-bold text-white">{playerResult.name}</h4>
+                        <span className="text-[11px] text-cyan-400 font-semibold">{playerResult.source}</span>
+                        <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+                          <HiCheck className="h-3 w-3" /> Ready to Preview & Equip
+                        </p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setPreviewCapeUrl(nicknameResult.url)
-                        setSelectedCapeId(`player-${nicknameResult.name}`)
+                        setPreviewCapeUrl(playerResult.url)
+                        setSelectedCapeId(`player-${playerResult.name}`)
                         playSound('click')
+                        showToast(`Selected ${playerResult.name}!`)
                       }}
-                      className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs"
+                      className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition-all"
                     >
-                      Select In Studio
+                      Select Cape
                     </button>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB 2: Custom Upload Tab */}
-          {activeTab === 'custom' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8">
+          {/* Option 2: Upload Custom Cape */}
+          {activeTab === 'upload' && (
+            <div className="flex-1 flex flex-col items-center justify-center max-w-xl mx-auto w-full py-6">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -708,36 +580,41 @@ export default function CapesPage() {
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full max-w-lg p-10 rounded-3xl border-2 border-dashed border-purple-500/40 hover:border-purple-400 bg-purple-950/10 hover:bg-purple-950/20 transition-all cursor-pointer flex flex-col items-center text-center group"
+                className="w-full p-12 rounded-3xl border-2 border-dashed border-purple-500/40 hover:border-purple-400 bg-purple-950/10 hover:bg-purple-950/20 transition-all cursor-pointer flex flex-col items-center text-center group shadow-2xl"
               >
-                <div className="h-16 w-16 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform mb-4 border border-purple-500/30">
+                <div className="h-16 w-16 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform mb-4 border border-purple-500/30 shadow-lg shadow-purple-500/10">
                   <HiArrowUpTray className="h-8 w-8" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">
+                <h3 className="text-base font-bold text-white mb-1.5">
                   Click to select or drag & drop a Cape PNG
                 </h3>
-                <p className="text-xs text-slate-400 max-w-sm mb-4">
-                  Standard Minecraft 64x32 cape textures are supported. Will render with dynamic waving cloth physics in-game.
+                <p className="text-xs text-slate-400 max-w-md mb-5 leading-relaxed">
+                  Upload any standard Minecraft cape file. It will render in 3D and wave smoothly with dynamic cloth physics in-game.
                 </p>
-                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-purple-300 font-mono">
-                  Supported: 64x32, 128x64 HD
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-purple-300 font-mono">
+                    Standard: 64x32 .PNG
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-purple-300 font-mono">
+                    HD: 128x64 .PNG
+                  </span>
+                </div>
               </div>
 
+              {/* Uploaded Cape Card Preview */}
               {customCapeDataUri && (
-                <div className="mt-6 flex items-center gap-4 p-4 rounded-2xl bg-white/[0.04] border border-white/10">
-                  <SteveBackCapeCanvas
-                    cape={{
-                      id: 'custom-preview',
-                      name: customCapeName,
-                      description: 'Custom Cape',
-                      category: 'community',
-                      getTexture: () => customCapeDataUri
-                    }}
-                  />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{customCapeName}</h4>
-                    <p className="text-xs text-emerald-400 font-semibold">Custom Cape Ready to Equip</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 flex items-center justify-between w-full p-4 rounded-2xl bg-white/[0.04] border border-white/10 shadow-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <SteveBackCapeCanvas textureUrl={customCapeDataUri} />
+                    <div className="text-left">
+                      <h4 className="text-sm font-bold text-white">{customCapeName}</h4>
+                      <p className="text-xs text-emerald-400 font-semibold">Custom Cape Imported</p>
+                      <span className="text-[10px] text-slate-400">Ready to equip to your account</span>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -745,95 +622,14 @@ export default function CapesPage() {
                       setPreviewCapeUrl(customCapeDataUri)
                       setSelectedCapeId('custom')
                       playSound('click')
+                      showToast(`Selected "${customCapeName}"!`)
                     }}
-                    className="ml-auto px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
+                    className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition-all"
                   >
-                    Select In Studio
+                    Select Cape
                   </button>
-                </div>
+                </motion.div>
               )}
-            </div>
-          )}
-
-          {/* TAB 3: Main Worldwide Cape Cards Grid */}
-          {activeTab !== 'nickname' && activeTab !== 'custom' && (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pt-4">
-              {paginatedCapes.map((cape) => {
-                const isSelected = selectedCapeId === cape.id
-                const isEquipped = activeAccount?.capeId === cape.id
-
-                return (
-                  <motion.div
-                    key={cape.id}
-                    whileHover={{ y: -3, scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => handleSelectCuratedCape(cape)}
-                    className={cn(
-                      'group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between overflow-hidden bg-[#0A0D18]/80',
-                      isSelected
-                        ? 'border-purple-400/80 bg-gradient-to-b from-purple-950/30 to-[#0A0D18] shadow-[0_0_25px_rgba(168,85,247,0.25)]'
-                        : 'border-white/[0.07] hover:border-white/20 hover:bg-[#0E1322]'
-                    )}
-                  >
-                    {/* Top Row: Badge & Status */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={cn(
-                        'text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider',
-                        cape.isAnimated
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                          : cape.category === 'official'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-white/10 text-slate-300'
-                      )}>
-                        {cape.badge || (cape.isAnimated ? 'ANIMATED' : 'CLASSIC')}
-                      </span>
-                      {isEquipped && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                          <HiCheck className="h-3 w-3" /> Equipped
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Visual Card: Steve from the BACK wearing the cape (Cycles frames if animated!) */}
-                    <div className="h-36 w-full rounded-xl flex items-center justify-center bg-black/40 border border-white/[0.06] mb-2.5 relative overflow-hidden group-hover:border-white/15 transition-all">
-                      <SteveBackCapeCanvas
-                        cape={cape}
-                        frame={cape.isAnimated ? globalFrame : 0}
-                      />
-
-                      {cape.isAnimated && (
-                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-purple-500/30 border border-purple-400/40 text-[8.5px] font-mono text-purple-200 animate-pulse">
-                          LIVE ANIMATED
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Details */}
-                    <div>
-                      <h3 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors truncate">
-                        {cape.name}
-                      </h3>
-                      <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-relaxed">
-                        {cape.description}
-                      </p>
-                    </div>
-
-                    {/* Footer Row: Heart / Likes count */}
-                    <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
-                      <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-rose-400 transition-colors">
-                        <HiHeart className="h-3.5 w-3.5 text-rose-500/80" />
-                        <span className="font-mono text-[10px] font-semibold">
-                          {cape.likes ? cape.likes.toLocaleString() : '10,000+'}
-                        </span>
-                      </div>
-
-                      <span className={cn('text-[10px] font-bold', isSelected ? 'text-purple-400' : 'text-slate-500')}>
-                        {isSelected ? 'Selected' : 'Try On'}
-                      </span>
-                    </div>
-                  </motion.div>
-                )
-              })}
             </div>
           )}
         </div>
